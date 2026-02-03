@@ -10,6 +10,7 @@
 - `AppLogger`는 `info`, `error`, `warn`, `debug` 메서드만 제공함. `logger.log()` 대신 `logger.info()` 사용할 것.
 - API 응답 스키마에서 `redirectTo` 등 경로 필드는 `z.string().url()` 대신 `z.string()` 사용 (상대 경로 허용).
 - **Before starting development**: Run `npm run env:check` to verify `.env.local` is properly configured.
+- **After code modifications (when requested or for deploy)**: Commit all changes and push to `origin main` so Vercel auto-deploys. Use a clear commit message (e.g. `fix(mobile): ...` or `feat: ...`).
 
 ## Library
 
