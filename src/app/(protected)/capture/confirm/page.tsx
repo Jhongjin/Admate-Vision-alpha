@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
 import type { CaptureSessionData } from "@/features/capture/constants";
+import { reverseGeocode } from "@/features/capture/lib/reverse-geocode";
 import { format } from "date-fns";
 
 const FALLBACK = {
@@ -16,6 +17,8 @@ const FALLBACK = {
 
 export default function CaptureConfirmPage() {
   const [data, setData] = useState<CaptureSessionData | null>(null);
+  const [addressLabel, setAddressLabel] = useState<string | null>(null);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -29,13 +32,26 @@ export default function CaptureConfirmPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (data?.lat == null || data?.lng == null) return;
+    setAddressLoading(true);
+    setAddressLabel(null);
+    reverseGeocode(data.lat, data.lng)
+      .then((addr) => setAddressLabel(addr ?? null))
+      .catch(() => setAddressLabel(null))
+      .finally(() => setAddressLoading(false));
+  }, [data?.lat, data?.lng]);
+
   const hasGps = data?.lat != null && data?.lng != null;
-  const locationText = hasGps
-    ? `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`
-    : FALLBACK.location;
+  const locationText = (() => {
+    if (!hasGps) return FALLBACK.location;
+    if (addressLoading) return "주소 조회 중...";
+    if (addressLabel) return addressLabel;
+    return `${data!.lat.toFixed(6)}, ${data!.lng.toFixed(6)}`;
+  })();
   const accuracyText =
     hasGps && data?.accuracy != null
-      ? ` (약 ±${Math.round(data.accuracy)}m)`
+      ? ` · 약 ±${Math.round(data.accuracy)}m`
       : "";
   const mapsUrl =
     hasGps
