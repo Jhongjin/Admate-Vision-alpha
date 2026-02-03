@@ -22,20 +22,25 @@ export default function CapturePage() {
     setStatus("loading");
     setErrorMessage(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
       }
+      streamRef.current = stream;
       setStatus("ready");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "카메라 접근에 실패했습니다.";
       setErrorMessage(
-        message.includes("Permission")
+        message.includes("Permission") || message.includes("권한")
           ? "카메라 권한을 허용해 주세요."
           : message
       );
@@ -59,6 +64,15 @@ export default function CapturePage() {
     startCamera();
     return () => stopCamera();
   }, [startCamera, stopCamera]);
+
+  useEffect(() => {
+    if (status !== "ready" || !videoRef.current || !streamRef.current) return;
+    const video = videoRef.current;
+    video.srcObject = streamRef.current;
+    video.setAttribute("playsinline", "true");
+    video.muted = true;
+    video.play().catch(() => {});
+  }, [status]);
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">

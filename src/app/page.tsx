@@ -1,16 +1,21 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { setRegisteredEmail } from "@/lib/registered-email";
+import { getRegisteredEmail, setRegisteredEmail } from "@/lib/registered-email";
 
 export default function Home() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = getRegisteredEmail();
+    if (stored) router.replace("/capture");
+  }, [router]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -77,7 +82,7 @@ export default function Home() {
         </form>
 
         <p className="text-xs text-secondary-500">
-          등록된 이메일은 쿠키에 저장되며, 다음 방문 시 바로 촬영 화면으로 이동합니다.
+          등록된 이메일은 쿠키·브라우저 저장소에 저장되며, 다음 방문 시 바로 촬영 화면으로 이동합니다.
         </p>
       </section>
     </main>
