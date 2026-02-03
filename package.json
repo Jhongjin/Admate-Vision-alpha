@@ -39,6 +39,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4",
     "es-toolkit": "^1",
+    "fastest-levenshtein": "^1.0.16",
     "framer-motion": "^11",
     "hono": "^4.9.9",
     "lucide-react": "^0.469.0",
