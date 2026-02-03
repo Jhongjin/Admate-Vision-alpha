@@ -1,17 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Camera, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
+import type { CaptureSessionData } from "@/features/capture/constants";
 
 export default function CapturePage() {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle"
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const startCamera = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -74,6 +78,48 @@ export default function CapturePage() {
     video.play().catch(() => {});
   }, [status]);
 
+  const handleCapture = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+    setIsCapturing(true);
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setIsCapturing(false);
+      return;
+    }
+    ctx.drawImage(video, 0, 0);
+    const imageDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+    const saveAndNavigate = (lat?: number, lng?: number) => {
+      const data: CaptureSessionData = {
+        imageDataUrl,
+        lat,
+        lng,
+        capturedAt: new Date().toISOString(),
+      };
+      try {
+        sessionStorage.setItem(CAPTURE_SESSION_KEY, JSON.stringify(data));
+      } catch {
+        /* ignore */
+      }
+      router.push("/capture/confirm");
+      setIsCapturing(false);
+    };
+
+    if (navigator.geolocation?.getCurrentPosition) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => saveAndNavigate(pos.coords.latitude, pos.coords.longitude),
+        () => saveAndNavigate(),
+        { timeout: 3000, maximumAge: 10000 }
+      );
+    } else {
+      saveAndNavigate();
+    }
+  }, [router]);
+
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
       <div className="container py-4">
@@ -116,11 +162,14 @@ export default function CapturePage() {
 
       <div className="border-t border-secondary-200 bg-white p-6 flex flex-wrap gap-3">
         {status === "ready" && (
-          <Button asChild size="lg" className="gap-2">
-            <Link href="/capture/confirm">
-              <Camera className="h-5 w-5" />
-              촬영
-            </Link>
+          <Button
+            size="lg"
+            className="gap-2"
+            disabled={isCapturing}
+            onClick={handleCapture}
+          >
+            <Camera className="h-5 w-5" />
+            {isCapturing ? "촬영 중..." : "촬영"}
           </Button>
         )}
         {status === "error" && (

@@ -1,19 +1,42 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { MapPin, Building2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
+import type { CaptureSessionData } from "@/features/capture/constants";
+import { format } from "date-fns";
 
-const DUMMY_CONFIRM = {
-  imageUrl: "https://picsum.photos/seed/confirm/640/480",
-  location: "서울시 강남구 테헤란로 123",
-  advertiser: "(주)더미광고주",
-  capturedAt: "2026-02-03 14:30",
+const FALLBACK = {
+  location: "위치 정보 없음",
+  advertiser: "광고주 인식 전 (미연동)",
 };
 
 export default function CaptureConfirmPage() {
+  const [data, setData] = useState<CaptureSessionData | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(CAPTURE_SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CaptureSessionData;
+        if (parsed.imageDataUrl) setData(parsed);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const locationText =
+    data?.lat != null && data?.lng != null
+      ? `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`
+      : FALLBACK.location;
+  const capturedAtText = data?.capturedAt
+    ? format(new Date(data.capturedAt), "yyyy-MM-dd HH:mm")
+    : "-";
+
   return (
     <div className="container py-8">
       <header className="mb-6">
@@ -25,25 +48,30 @@ export default function CaptureConfirmPage() {
 
       <Card className="overflow-hidden border-secondary-200">
         <div className="relative aspect-video w-full bg-gray-100">
-          <Image
-            src={DUMMY_CONFIRM.imageUrl}
-            alt="촬영 이미지"
-            fill
-            className="object-cover"
-          />
+          {data?.imageDataUrl ? (
+            <img
+              src={data.imageDataUrl}
+              alt="촬영 이미지"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-secondary-500">
+              촬영 데이터가 없습니다. 촬영 화면에서 다시 촬영해 주세요.
+            </div>
+          )}
         </div>
         <CardHeader>
           <CardContent className="space-y-3 p-0">
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="h-4 w-4 shrink-0 text-secondary-500" />
-              <span className="text-gray-700">{DUMMY_CONFIRM.location}</span>
+              <span className="text-gray-700">{locationText}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Building2 className="h-4 w-4 shrink-0 text-secondary-500" />
-              <span className="text-gray-700">{DUMMY_CONFIRM.advertiser}</span>
+              <span className="text-gray-700">{FALLBACK.advertiser}</span>
             </div>
             <p className="text-xs text-secondary-500">
-              촬영 시각: {DUMMY_CONFIRM.capturedAt}
+              촬영 시각: {capturedAtText}
             </p>
           </CardContent>
         </CardHeader>
