@@ -2,20 +2,31 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, AlertCircle } from "lucide-react";
+import { Camera, AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
 import type { CaptureSessionData } from "@/features/capture/constants";
+
+const GPS_MAX_AGE_MS = 30_000;
+
+type GpsStatus = "idle" | "loading" | "ready" | "error" | "unsupported";
 
 export default function CapturePage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const gpsPositionRef = useRef<{
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    timestamp: number;
+  } | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle"
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
 
   const startCamera = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -78,6 +89,28 @@ export default function CapturePage() {
     video.play().catch(() => {});
   }, [status]);
 
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (!navigator.geolocation?.getCurrentPosition) {
+      setGpsStatus("unsupported");
+      return;
+    }
+    setGpsStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        gpsPositionRef.current = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          timestamp: Date.now(),
+        };
+        setGpsStatus("ready");
+      },
+      () => setGpsStatus("error"),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE_MS }
+    );
+  }, [status]);
+
   const handleCapture = useCallback(() => {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
@@ -93,11 +126,12 @@ export default function CapturePage() {
     ctx.drawImage(video, 0, 0);
     const imageDataUrl = canvas.toDataURL("image/jpeg", 0.85);
 
-    const saveAndNavigate = (lat?: number, lng?: number) => {
+    const saveAndNavigate = (lat?: number, lng?: number, accuracy?: number) => {
       const data: CaptureSessionData = {
         imageDataUrl,
         lat,
         lng,
+        accuracy,
         capturedAt: new Date().toISOString(),
       };
       try {
@@ -109,11 +143,25 @@ export default function CapturePage() {
       setIsCapturing(false);
     };
 
+    const cached = gpsPositionRef.current;
+    const isCachedFresh =
+      cached && Date.now() - cached.timestamp < GPS_MAX_AGE_MS;
+
+    if (isCachedFresh) {
+      saveAndNavigate(cached.lat, cached.lng, cached.accuracy);
+      return;
+    }
+
     if (navigator.geolocation?.getCurrentPosition) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => saveAndNavigate(pos.coords.latitude, pos.coords.longitude),
+        (pos) =>
+          saveAndNavigate(
+            pos.coords.latitude,
+            pos.coords.longitude,
+            pos.coords.accuracy
+          ),
         () => saveAndNavigate(),
-        { timeout: 3000, maximumAge: 10000 }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: GPS_MAX_AGE_MS }
       );
     } else {
       saveAndNavigate();
@@ -127,6 +175,15 @@ export default function CapturePage() {
         <p className="mt-1 text-sm text-secondary-500">
           PC에서는 웹캠, 스마트폰에서는 후면 카메라로 촬영할 수 있습니다.
         </p>
+        {status === "ready" && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-secondary-500">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            {gpsStatus === "loading" && "위치 수집 중..."}
+            {gpsStatus === "ready" && "위치 준비됨"}
+            {gpsStatus === "error" && "위치 사용 불가 (권한 또는 오류)"}
+            {gpsStatus === "unsupported" && "위치 미지원 브라우저"}
+          </p>
+        )}
       </div>
 
       <div className="relative flex-1 min-h-[240px] bg-gray-900">

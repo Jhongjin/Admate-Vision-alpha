@@ -29,10 +29,18 @@ export default function CaptureConfirmPage() {
     }
   }, []);
 
-  const locationText =
-    data?.lat != null && data?.lng != null
-      ? `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`
-      : FALLBACK.location;
+  const hasGps = data?.lat != null && data?.lng != null;
+  const locationText = hasGps
+    ? `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`
+    : FALLBACK.location;
+  const accuracyText =
+    hasGps && data?.accuracy != null
+      ? ` (약 ±${Math.round(data.accuracy)}m)`
+      : "";
+  const mapsUrl =
+    hasGps
+      ? `https://www.google.com/maps?q=${data!.lat},${data!.lng}`
+      : null;
   const capturedAtText = data?.capturedAt
     ? format(new Date(data.capturedAt), "yyyy-MM-dd HH:mm")
     : "-";
@@ -62,9 +70,24 @@ export default function CaptureConfirmPage() {
         </div>
         <CardHeader>
           <CardContent className="space-y-3 p-0">
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 shrink-0 text-secondary-500" />
-              <span className="text-gray-700">{locationText}</span>
+            <div className="flex flex-col gap-1 text-sm">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 shrink-0 text-secondary-500" />
+                <span className="text-gray-700">
+                  {locationText}
+                  {accuracyText}
+                </span>
+              </div>
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary-500 hover:underline"
+                >
+                  지도에서 보기
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Building2 className="h-4 w-4 shrink-0 text-secondary-500" />

@@ -5,5 +5,6 @@ export type CaptureSessionData = {
   imageDataUrl: string;
   lat?: number;
   lng?: number;
+  accuracy?: number;
   capturedAt: string;
 };
