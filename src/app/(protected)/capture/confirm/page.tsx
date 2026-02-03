@@ -7,18 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
 import type { CaptureSessionData } from "@/features/capture/constants";
+import { DUMMY_ADVERTISERS } from "@/features/capture/data/dummy-advertisers";
+import { extractTextFromImage } from "@/features/capture/lib/ocr";
+import { matchOcrToAdvertiser } from "@/features/capture/lib/match-advertiser";
 import { reverseGeocode } from "@/features/capture/lib/reverse-geocode";
 import { format } from "date-fns";
 
 const FALLBACK = {
   location: "위치 정보 없음",
-  advertiser: "광고주 인식 전 (미연동)",
+  advertiser: "광고주 미인식",
 };
 
 export default function CaptureConfirmPage() {
   const [data, setData] = useState<CaptureSessionData | null>(null);
   const [addressLabel, setAddressLabel] = useState<string | null>(null);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [advertiserLabel, setAdvertiserLabel] = useState<string | null>(null);
+  const [advertiserLoading, setAdvertiserLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -41,6 +46,21 @@ export default function CaptureConfirmPage() {
       .catch(() => setAddressLabel(null))
       .finally(() => setAddressLoading(false));
   }, [data?.lat, data?.lng]);
+
+  useEffect(() => {
+    if (!data?.imageDataUrl) return;
+    setAdvertiserLoading(true);
+    setAdvertiserLabel(null);
+    extractTextFromImage(data.imageDataUrl)
+      .then((ocr) => {
+        const match = matchOcrToAdvertiser(ocr.text, DUMMY_ADVERTISERS);
+        setAdvertiserLabel(
+          match ? match.advertiserName : null
+        );
+      })
+      .catch(() => setAdvertiserLabel(null))
+      .finally(() => setAdvertiserLoading(false));
+  }, [data?.imageDataUrl]);
 
   const hasGps = data?.lat != null && data?.lng != null;
   const locationText = (() => {
@@ -107,7 +127,11 @@ export default function CaptureConfirmPage() {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Building2 className="h-4 w-4 shrink-0 text-secondary-500" />
-              <span className="text-gray-700">{FALLBACK.advertiser}</span>
+              <span className="text-gray-700">
+                {advertiserLoading
+                  ? "광고주 인식 중..."
+                  : advertiserLabel ?? FALLBACK.advertiser}
+              </span>
             </div>
             <p className="text-xs text-secondary-500">
               촬영 시각: {capturedAtText}

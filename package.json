@@ -49,6 +49,7 @@
     "react-hook-form": "^7",
     "react-use": "^17",
     "server-only": "0.0.1",
+    "tesseract.js": "^7.0.0",
     "ts-pattern": "^5",
     "zod": "^3",
     "zustand": "^4"
