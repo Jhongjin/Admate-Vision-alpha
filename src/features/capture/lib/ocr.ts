@@ -20,11 +20,14 @@ export async function extractTextFromImage(
     return { text: "", confidence: 0 };
   }
 
-  const { createWorker } = await import("tesseract.js");
+  const { createWorker, PSM } = await import("tesseract.js");
 
   const worker = await createWorker("kor+eng");
 
   try {
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+    });
     const {
       data: { text, confidence },
     } = await worker.recognize(imageDataUrl);
