@@ -8,6 +8,8 @@ import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
 import type { CaptureSessionData } from "@/features/capture/constants";
 
 const GPS_MAX_AGE_MS = 30_000;
+/** 지하·실내(지하철 등)에서는 위성 대신 Wi-Fi/기지국 위치 사용을 위해 false */
+const GPS_HIGH_ACCURACY = false;
 
 type GpsStatus = "idle" | "loading" | "ready" | "error" | "unsupported";
 
@@ -107,7 +109,11 @@ export default function CapturePage() {
         setGpsStatus("ready");
       },
       () => setGpsStatus("error"),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE_MS }
+      {
+        enableHighAccuracy: GPS_HIGH_ACCURACY,
+        timeout: 12000,
+        maximumAge: GPS_MAX_AGE_MS,
+      }
     );
   }, [status]);
 
@@ -161,7 +167,11 @@ export default function CapturePage() {
             pos.coords.accuracy
           ),
         () => saveAndNavigate(),
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: GPS_MAX_AGE_MS }
+        {
+          enableHighAccuracy: GPS_HIGH_ACCURACY,
+          timeout: 8000,
+          maximumAge: GPS_MAX_AGE_MS,
+        }
       );
     } else {
       saveAndNavigate();
