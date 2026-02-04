@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Camera, FileText } from "lucide-react";
-import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { useRegisteredEmail } from "@/features/auth/hooks/useRegisteredEmail";
+import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -18,14 +19,15 @@ const DUMMY_STATS = {
 
 export default function DashboardPage({ params }: DashboardPageProps) {
   void params;
-  const { user } = useCurrentUser();
+  const { email } = useRegisteredEmail();
+  const { profile } = useUserProfile();
 
   return (
     <div className="container py-8">
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">대시보드</h1>
         <p className="mt-1 text-secondary-500">
-          {user?.email ?? "사용자"} 님, 환영합니다.
+          {profile?.name ?? email ?? "사용자"} 님, 환영합니다.
         </p>
       </header>
 

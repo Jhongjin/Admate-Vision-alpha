@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Camera, LayoutDashboard, FileText, LogOut } from "lucide-react";
+import { Camera, LayoutDashboard, FileText, Users, LogOut } from "lucide-react";
 import { useRegisteredEmail } from "@/features/auth/hooks/useRegisteredEmail";
+import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/capture", label: "촬영", icon: Camera },
+  { href: "/advertisers", label: "광고주 관리", icon: Users },
   { href: "/reports", label: "보고 목록", icon: FileText },
 ] as const;
 
@@ -17,6 +19,7 @@ export function ProtectedHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { email, clearRegisteredEmail } = useRegisteredEmail();
+  const { profile } = useUserProfile();
 
   const handleClearEmail = () => {
     clearRegisteredEmail();
@@ -54,14 +57,14 @@ export function ProtectedHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-secondary-500 truncate max-w-[180px]">
-            {email ?? ""}
+          <span className="max-w-[180px] truncate text-sm text-secondary-500" title={email ?? undefined}>
+            {profile?.name ? `${profile.name} (${email ?? ""})` : email ?? ""}
           </span>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClearEmail}
-            title="이메일 삭제 후 처음 화면으로"
+            title="로그아웃"
           >
             <LogOut className="h-4 w-4" />
           </Button>

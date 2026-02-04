@@ -1,182 +1,110 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { signupApi, extractApiErrorMessage } from "@/features/auth/api";
+import { setRegisteredEmail } from "@/lib/registered-email";
+import { useToast } from "@/hooks/use-toast";
 
-const defaultFormState = {
-  email: "",
-  password: "",
-  confirmPassword: "",
-};
-
-type SignupPageProps = {
-  params: Promise<Record<string, never>>;
-};
-
-export default function SignupPage({ params }: SignupPageProps) {
-  void params;
+export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { isAuthenticated, refresh } = useCurrentUser();
-  const [formState, setFormState] = useState(defaultFormState);
+  const { toast } = useToast();
+  const [formState, setFormState] = useState({ name: "", email: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const redirectedFrom = searchParams.get("redirectedFrom") ?? "/";
-      router.replace(redirectedFrom);
-    }
-  }, [isAuthenticated, router, searchParams]);
-
-  const isSubmitDisabled = useMemo(
-    () =>
-      !formState.email.trim() ||
-      !formState.password.trim() ||
-      formState.password !== formState.confirmPassword,
-    [formState.confirmPassword, formState.email, formState.password]
-  );
 
   const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = event.target;
-      setFormState((previous) => ({ ...previous, [name]: value }));
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setFormState((prev) => ({ ...prev, [name]: value }));
     },
     []
   );
 
   const handleSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!formState.name.trim() || !formState.email.trim()) return;
       setIsSubmitting(true);
-      setErrorMessage(null);
-      setInfoMessage(null);
-
-      if (formState.password !== formState.confirmPassword) {
-        setErrorMessage("비밀번호가 일치하지 않습니다.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const supabase = getSupabaseBrowserClient();
-
       try {
-        const result = await supabase.auth.signUp({
-          email: formState.email,
-          password: formState.password,
+        const user = await signupApi({
+          name: formState.name.trim(),
+          email: formState.email.trim(),
         });
-
-        if (result.error) {
-          setErrorMessage(result.error.message ?? "회원가입에 실패했습니다.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        await refresh();
-
-        const redirectedFrom = searchParams.get("redirectedFrom") ?? "/";
-
-        if (result.data.session) {
-          router.replace(redirectedFrom);
-          return;
-        }
-
-        setInfoMessage(
-          "확인 이메일을 보냈습니다. 이메일 인증 후 로그인해 주세요."
-        );
-        router.prefetch("/login");
-        setFormState(defaultFormState);
-      } catch (error) {
-        setErrorMessage("회원가입 처리 중 문제가 발생했습니다.");
+        setRegisteredEmail(user.email);
+        toast({ title: "회원가입 완료", description: `${user.name}님, 환영합니다.` });
+        router.replace("/capture");
+      } catch (err) {
+        toast({
+          title: "회원가입 실패",
+          description: extractApiErrorMessage(err, "회원가입 중 오류가 발생했습니다."),
+          variant: "destructive",
+        });
       } finally {
         setIsSubmitting(false);
       }
     },
-    [formState.confirmPassword, formState.email, formState.password, refresh, router, searchParams]
+    [formState.name, formState.email, router, toast]
   );
-
-  if (isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-10 px-6 py-16">
       <header className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-3xl font-semibold">회원가입</h1>
-        <p className="text-slate-500">
-          Supabase 계정으로 회원가입하고 프로젝트를 시작하세요.
+        <h1 className="text-3xl font-semibold text-gray-900">회원가입</h1>
+        <p className="text-secondary-500">
+          이름과 이메일만 입력하면 됩니다. DB에 저장되어 다음에도 사용할 수 있습니다.
         </p>
       </header>
       <div className="grid w-full gap-8 md:grid-cols-2">
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-xl border border-slate-200 p-6 shadow-sm"
+          className="flex flex-col gap-4 rounded-xl border border-secondary-200 bg-white p-6 shadow-sm"
         >
-          <label className="flex flex-col gap-2 text-sm text-slate-700">
-            이메일
-            <input
-              type="email"
-              name="email"
-              autoComplete="email"
+          <div className="space-y-2">
+            <Label htmlFor="name">이름 (필수)</Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              placeholder="홍길동"
+              value={formState.name}
+              onChange={handleChange}
               required
+              disabled={isSubmitting}
+              className="border-secondary-200"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">이메일 (필수)</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="example@company.com"
               value={formState.email}
               onChange={handleChange}
-              className="rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm text-slate-700">
-            비밀번호
-            <input
-              type="password"
-              name="password"
-              autoComplete="new-password"
               required
-              value={formState.password}
-              onChange={handleChange}
-              className="rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+              disabled={isSubmitting}
+              className="border-secondary-200"
             />
-          </label>
-          <label className="flex flex-col gap-2 text-sm text-slate-700">
-            비밀번호 확인
-            <input
-              type="password"
-              name="confirmPassword"
-              autoComplete="new-password"
-              required
-              value={formState.confirmPassword}
-              onChange={handleChange}
-              className="rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-            />
-          </label>
-          {errorMessage ? (
-            <p className="text-sm text-rose-500">{errorMessage}</p>
-          ) : null}
-          {infoMessage ? (
-            <p className="text-sm text-emerald-600">{infoMessage}</p>
-          ) : null}
-          <button
-            type="submit"
-            disabled={isSubmitting || isSubmitDisabled}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {isSubmitting ? "등록 중" : "회원가입"}
-          </button>
-          <p className="text-xs text-slate-500">
+          </div>
+          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "등록 중…" : "회원가입"}
+          </Button>
+          <p className="text-center text-sm text-secondary-500">
             이미 계정이 있으신가요?{" "}
-            <Link
-              href="/login"
-              className="font-medium text-slate-700 underline hover:text-slate-900"
-            >
-              로그인으로 이동
+            <Link href="/login" className="font-medium text-primary-600 hover:underline">
+              로그인
             </Link>
           </p>
         </form>
-        <figure className="overflow-hidden rounded-xl border border-slate-200">
+        <figure className="overflow-hidden rounded-xl border border-secondary-200">
           <Image
             src="https://picsum.photos/seed/signup/640/640"
             alt="회원가입"

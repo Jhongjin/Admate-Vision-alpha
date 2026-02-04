@@ -1,4 +1,15 @@
 # Technical Requirements Document (TRD)
+
+## Admate-Vision Supabase 구조
+
+한 Supabase 프로젝트(Admate-Vision)에서 두 하위 프로젝트를 관리합니다.
+
+- **Vision-OCR**: 옥외 광고 게재 현황 자동 보고 → `vision_ocr_*` 테이블
+- **Vision-DA**: 디지털 온라인 광고 배너 캡처 → `vision_da_*` 테이블
+
+테이블 상세: `vooster-docs/supabase-admate-vision-tables.md`
+
+---
   
 ## Tech Stack
 
