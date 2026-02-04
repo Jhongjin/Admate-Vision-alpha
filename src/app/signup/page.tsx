@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { isAxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,16 +14,21 @@ import { signupApi, extractApiErrorMessage } from "@/features/auth/api";
 import { setRegisteredEmail } from "@/lib/registered-email";
 import { useToast } from "@/hooks/use-toast";
 
+const DUPLICATE_EMAIL_MESSAGE =
+  "이미 가입된 이메일입니다. 로그인을 이용해 주세요.";
+
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [formState, setFormState] = useState({ name: "", email: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicateEmailMessage, setDuplicateEmailMessage] = useState<string | null>(null);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
       setFormState((prev) => ({ ...prev, [name]: value }));
+      setDuplicateEmailMessage(null);
     },
     []
   );
@@ -32,6 +38,7 @@ export default function SignupPage() {
       e.preventDefault();
       if (!formState.name.trim() || !formState.email.trim()) return;
       setIsSubmitting(true);
+      setDuplicateEmailMessage(null);
       try {
         const user = await signupApi({
           name: formState.name.trim(),
@@ -41,11 +48,17 @@ export default function SignupPage() {
         toast({ title: "회원가입 완료", description: `${user.name}님, 환영합니다.` });
         router.replace("/capture");
       } catch (err) {
-        toast({
-          title: "회원가입 실패",
-          description: extractApiErrorMessage(err, "회원가입 중 오류가 발생했습니다."),
-          variant: "destructive",
-        });
+        const isDuplicate =
+          isAxiosError(err) && err.response?.status === 409;
+        if (isDuplicate) {
+          setDuplicateEmailMessage(DUPLICATE_EMAIL_MESSAGE);
+        } else {
+          toast({
+            title: "회원가입 실패",
+            description: extractApiErrorMessage(err, "회원가입 중 오류가 발생했습니다."),
+            variant: "destructive",
+          });
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -112,6 +125,14 @@ export default function SignupPage() {
               >
                 {isSubmitting ? "등록 중…" : "Sign Up"}
               </Button>
+              {duplicateEmailMessage && (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-lg bg-amber-50 px-3 py-2.5 text-center text-sm font-medium text-amber-800"
+                >
+                  {duplicateEmailMessage}
+                </p>
+              )}
             </form>
             <p className="mt-4 text-center text-sm text-slate-500">
               이미 계정이 있으신가요?{" "}
