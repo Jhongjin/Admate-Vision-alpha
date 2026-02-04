@@ -2,6 +2,8 @@
 
 광고 이미지 텍스트 전수 조사 후, 기 등록 광고주 정보와 **가장 유사한** 광고주를 선별하는 로직 구체화 및 최신 기술 검토.
 
+> **근본 개선**: 더미 검색어 조정이 아닌 **OCR 추출 정확도**와 **DB 광고주 목록과의 유사도 매칭** 중심의 조사·권장은 **`ocr-fundamental-survey.md`** 참고.
+
 ---
 
 ## 1. 요구 흐름 정리
@@ -95,6 +97,7 @@
 
 ## 6. 관련 문서
 
+- **`vooster-docs/ocr-fundamental-survey.md`** — OCR 근본 개선 기술 조사 (유료/무료 모델·기법·아키텍처)
 - `vooster-docs/capture-recognition-spec.md` — 촬영·인식 명세
 - `vooster-docs/recognition-rate-analysis.md` — 인식률 원인 분석
 - `src/features/capture/lib/ocr.ts` — OCR
