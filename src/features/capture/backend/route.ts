@@ -8,7 +8,7 @@ const OcrBodySchema = z.object({
 });
 
 export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
-  app.post("/api/capture/ocr", async (c) => {
+  app.post("/capture/ocr", async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const parsed = OcrBodySchema.safeParse(body);
     if (!parsed.success) {
