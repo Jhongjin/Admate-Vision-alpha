@@ -51,13 +51,29 @@ export default function CaptureConfirmPage() {
     if (!data?.imageDataUrl) return;
     setAdvertiserLoading(true);
     setAdvertiserLabel(null);
-    extractTextFromImage(data.imageDataUrl)
-      .then((ocr) => {
-        const match = matchOcrToAdvertiser(ocr.text, DUMMY_ADVERTISERS);
-        setAdvertiserLabel(
-          match ? match.advertiserName : null
-        );
+
+    const runOcrThenMatch = (ocrText: string) => {
+      const match = matchOcrToAdvertiser(ocrText, DUMMY_ADVERTISERS);
+      setAdvertiserLabel(match ? match.advertiserName : null);
+    };
+
+    const imageDataUrl = data.imageDataUrl;
+
+    fetch("/api/capture/ocr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageDataUrl }),
+    })
+      .then((res) => {
+        if (res.ok) return res.json() as Promise<{ text: string }>;
+        return Promise.reject(new Error("Server OCR unavailable"));
       })
+      .then((body) => runOcrThenMatch(body.text))
+      .catch(() =>
+        extractTextFromImage(imageDataUrl).then((ocr) =>
+          runOcrThenMatch(ocr.text)
+        )
+      )
       .catch(() => setAdvertiserLabel(null))
       .finally(() => setAdvertiserLoading(false));
   }, [data?.imageDataUrl]);
