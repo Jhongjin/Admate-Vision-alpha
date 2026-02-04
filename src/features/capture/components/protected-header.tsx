@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Camera, LayoutDashboard, FileText, Users, LogOut } from "lucide-react";
+import { BRAND } from "@/constants/brand";
 import { useRegisteredEmail } from "@/features/auth/hooks/useRegisteredEmail";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { Button } from "@/components/ui/button";
@@ -27,13 +28,13 @@ export function ProtectedHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b border-secondary-200 bg-white">
+    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="container flex h-14 items-center justify-between">
         <Link
           href="/capture"
-          className="text-lg font-semibold text-primary-500 hover:text-primary-600"
+          className="text-lg font-semibold tracking-tight text-slate-900 hover:text-primary-600"
         >
-          옥외 광고 게재 현황 자동 보고 툴
+          {BRAND.name} <span className="text-primary-600">Vision</span>
         </Link>
         <nav className="flex items-center gap-1">
           {navItems.map(({ href, label, icon: Icon }) => (
@@ -57,7 +58,7 @@ export function ProtectedHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <span className="max-w-[180px] truncate text-sm text-secondary-500" title={email ?? undefined}>
+          <span className="max-w-[180px] truncate text-sm text-slate-600" title={email ?? undefined}>
             {profile?.name ? `${profile.name} (${email ?? ""})` : email ?? ""}
           </span>
           <Button

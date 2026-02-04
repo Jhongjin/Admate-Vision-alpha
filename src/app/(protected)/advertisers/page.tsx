@@ -37,8 +37,8 @@ export default function AdvertisersPage() {
     <div className="container py-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">광고주 관리</h1>
-          <p className="mt-1 text-secondary-500">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">광고주 관리</h1>
+          <p className="mt-1 text-slate-600">
             광고주 정보를 등록·수정·삭제할 수 있습니다.
           </p>
         </div>
@@ -51,7 +51,7 @@ export default function AdvertisersPage() {
       </header>
 
       {error && (
-        <Card className="border-destructive/50 bg-destructive/5">
+        <Card className="border-red-200 bg-red-50/50">
           <CardContent className="pt-6">
             <p className="text-sm text-destructive">
               목록을 불러오지 못했습니다. {error.message}
@@ -61,14 +61,14 @@ export default function AdvertisersPage() {
       )}
 
       {isLoading && (
-        <p className="text-secondary-500">목록 불러오는 중…</p>
+        <p className="text-slate-600">목록 불러오는 중…</p>
       )}
 
       {!isLoading && !error && advertisers && advertisers.length === 0 && (
-        <Card className="border-secondary-200">
+        <Card className="border-slate-200">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-secondary-400" />
-            <p className="mt-4 text-secondary-500">등록된 광고주가 없습니다.</p>
+            <Users className="h-12 w-12 text-slate-400" />
+            <p className="mt-4 text-slate-600">등록된 광고주가 없습니다.</p>
             <Button asChild className="mt-4">
               <Link href="/advertisers/new" className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -83,7 +83,7 @@ export default function AdvertisersPage() {
         <ul className="space-y-3">
           {advertisers.map((adv) => (
             <li key={adv.id}>
-              <Card className="border-secondary-200">
+              <Card className="border-slate-200">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <h2 className="text-lg font-semibold">{adv.name}</h2>
                   <div className="flex gap-2">
@@ -104,7 +104,7 @@ export default function AdvertisersPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-1 text-sm text-secondary-600">
+                <CardContent className="space-y-1 text-sm text-slate-600">
                   <p>이메일: {adv.email}</p>
                   {adv.contactName && (
                     <p>광고주 담당자: {adv.contactName}</p>

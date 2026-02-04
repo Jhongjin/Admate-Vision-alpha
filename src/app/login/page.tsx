@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PublicHeader } from "@/components/layout/public-header";
+import { PublicFooter } from "@/components/layout/public-footer";
+import { BRAND } from "@/constants/brand";
 import { loginApi, extractApiErrorMessage } from "@/features/auth/api";
 import { setRegisteredEmail } from "@/lib/registered-email";
 import { useToast } from "@/hooks/use-toast";
@@ -42,54 +44,66 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-10 px-6 py-16">
-      <header className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-3xl font-semibold text-gray-900">로그인</h1>
-        <p className="text-secondary-500">
-          가입한 이메일로 로그인하세요.
-        </p>
-      </header>
-      <div className="grid w-full gap-8 md:grid-cols-2">
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-xl border border-secondary-200 bg-white p-6 shadow-sm"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="example@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isSubmitting}
-              className="border-secondary-200"
-            />
+    <div className="flex min-h-screen flex-col bg-white text-slate-900">
+      <PublicHeader />
+
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Sign In
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              가입한 이메일로 로그인하세요.
+            </p>
           </div>
-          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "로그인 중…" : "로그인"}
-          </Button>
-          <p className="text-center text-sm text-secondary-500">
-            계정이 없으신가요?{" "}
-            <Link href="/signup" className="font-medium text-primary-600 hover:underline">
-              회원가입
-            </Link>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-slate-700">
+                  이메일
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="example@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                  className="border-slate-200 bg-white"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "로그인 중…" : "Sign In"}
+              </Button>
+            </form>
+            <p className="mt-4 text-center text-sm text-slate-500">
+              계정이 없으신가요?{" "}
+              <Link
+                href="/signup"
+                className="font-medium text-primary-600 hover:text-primary-700 hover:underline"
+              >
+                Sign Up
+              </Link>
+            </p>
+          </div>
+
+          <p className="mt-6 text-center text-xs text-slate-500">
+            {BRAND.name} · {BRAND.visionTagline}
           </p>
-        </form>
-        <figure className="overflow-hidden rounded-xl border border-secondary-200">
-          <Image
-            src="https://picsum.photos/seed/login/640/640"
-            alt="로그인"
-            width={640}
-            height={640}
-            className="h-full w-full object-cover"
-            priority
-          />
-        </figure>
-      </div>
+        </div>
+      </main>
+
+      <PublicFooter />
     </div>
   );
 }

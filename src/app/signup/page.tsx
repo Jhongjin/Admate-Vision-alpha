@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PublicHeader } from "@/components/layout/public-header";
+import { PublicFooter } from "@/components/layout/public-footer";
+import { BRAND } from "@/constants/brand";
 import { signupApi, extractApiErrorMessage } from "@/features/auth/api";
 import { setRegisteredEmail } from "@/lib/registered-email";
 import { useToast } from "@/hooks/use-toast";
@@ -52,69 +54,83 @@ export default function SignupPage() {
   );
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center gap-10 px-6 py-16">
-      <header className="flex flex-col items-center gap-3 text-center">
-        <h1 className="text-3xl font-semibold text-gray-900">회원가입</h1>
-        <p className="text-secondary-500">
-          이름과 이메일만 입력하면 됩니다. DB에 저장되어 다음에도 사용할 수 있습니다.
-        </p>
-      </header>
-      <div className="grid w-full gap-8 md:grid-cols-2">
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-xl border border-secondary-200 bg-white p-6 shadow-sm"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="name">이름 (필수)</Label>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              autoComplete="name"
-              placeholder="홍길동"
-              value={formState.name}
-              onChange={handleChange}
-              required
-              disabled={isSubmitting}
-              className="border-secondary-200"
-            />
+    <div className="flex min-h-screen flex-col bg-white text-slate-900">
+      <PublicHeader />
+
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Sign Up
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              이름과 이메일만 입력하면 됩니다. DB에 저장되어 다음에도 사용할 수 있습니다.
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">이메일 (필수)</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="example@company.com"
-              value={formState.email}
-              onChange={handleChange}
-              required
-              disabled={isSubmitting}
-              className="border-secondary-200"
-            />
+
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-slate-700">
+                  이름 (필수)
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="홍길동"
+                  value={formState.name}
+                  onChange={handleChange}
+                  required
+                  disabled={isSubmitting}
+                  className="border-slate-200 bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-slate-700">
+                  이메일 (필수)
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="example@company.com"
+                  value={formState.email}
+                  onChange={handleChange}
+                  required
+                  disabled={isSubmitting}
+                  className="border-slate-200 bg-white"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "등록 중…" : "Sign Up"}
+              </Button>
+            </form>
+            <p className="mt-4 text-center text-sm text-slate-500">
+              이미 계정이 있으신가요?{" "}
+              <Link
+                href="/login"
+                className="font-medium text-primary-600 hover:text-primary-700 hover:underline"
+              >
+                Sign In
+              </Link>
+            </p>
           </div>
-          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "등록 중…" : "회원가입"}
-          </Button>
-          <p className="text-center text-sm text-secondary-500">
-            이미 계정이 있으신가요?{" "}
-            <Link href="/login" className="font-medium text-primary-600 hover:underline">
-              로그인
-            </Link>
+
+          <p className="mt-6 text-center text-xs text-slate-500">
+            {BRAND.name} · {BRAND.visionTagline}
           </p>
-        </form>
-        <figure className="overflow-hidden rounded-xl border border-secondary-200">
-          <Image
-            src="https://picsum.photos/seed/signup/640/640"
-            alt="회원가입"
-            width={640}
-            height={640}
-            className="h-full w-full object-cover"
-            priority
-          />
-        </figure>
-      </div>
+        </div>
+      </main>
+
+      <PublicFooter />
     </div>
   );
 }
