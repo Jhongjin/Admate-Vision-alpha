@@ -1,7 +1,8 @@
 /**
  * 촬영 이미지에서 OCR로 텍스트 추출.
  * 브라우저에서만 동작하며, Tesseract.js(kor+eng) 사용.
- * 단기 기법: 전처리(2배 스케일·대비 강화) 후 OCR로 인식률 향상.
+ * 단기 기법: 전처리(2배 스케일·대비 강화) + 회전 자동 보정(rotateAuto) 후 OCR로 인식률 향상.
+ * 가로 촬영 시 광고 문구가 회전해 있어도 Tesseract가 방향을 감지해 보정 후 인식.
  */
 
 export type OcrResult = {
@@ -92,7 +93,7 @@ export async function extractTextFromImage(
   try {
     const {
       data: { text, confidence },
-    } = await worker.recognize(preprocessed);
+    } = await worker.recognize(preprocessed, { rotateAuto: true });
     await worker.terminate();
     const normalizedConfidence =
       typeof confidence === "number" ? confidence / 100 : 0;
