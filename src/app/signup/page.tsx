@@ -57,10 +57,10 @@ export default function SignupPage() {
     <div className="flex min-h-screen flex-col bg-white text-slate-900">
       <PublicHeader />
 
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+      <main className="flex flex-1 flex-col items-center justify-center safe-area-padding-x py-8">
+        <div className="container w-full">
+          <div className="mb-6 text-center">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
               Sign Up
             </h1>
             <p className="mt-2 text-sm text-slate-600">
@@ -84,7 +84,7 @@ export default function SignupPage() {
                   onChange={handleChange}
                   required
                   disabled={isSubmitting}
-                  className="border-slate-200 bg-white"
+                  className="min-h-[48px] border-slate-200 bg-white text-base"
                 />
               </div>
               <div className="space-y-2">
@@ -101,13 +101,13 @@ export default function SignupPage() {
                   onChange={handleChange}
                   required
                   disabled={isSubmitting}
-                  className="border-slate-200 bg-white"
+                  className="min-h-[48px] border-slate-200 bg-white text-base"
                 />
               </div>
               <Button
                 type="submit"
                 size="lg"
-                className="w-full"
+                className="min-h-[48px] w-full"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "등록 중…" : "Sign Up"}

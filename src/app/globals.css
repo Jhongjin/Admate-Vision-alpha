@@ -8,9 +8,15 @@
 @utility container {
   margin-inline: auto;
   width: 100%;
-  padding-inline: 2rem;
+  padding-inline: 1rem;
+  max-width: 100%;
+  @media (width >= 420px) {
+    padding-inline: 1.25rem;
+    max-width: 420px;
+  }
   @media (width >= 1400px) {
     max-width: 1400px;
+    padding-inline: 2rem;
   }
 }
 
@@ -144,6 +150,22 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
+/* 모바일: 노치·safe area 대응 */
+@utility safe-area-padding-x {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+@utility safe-area-padding-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 @layer base {
   *,
   ::after,

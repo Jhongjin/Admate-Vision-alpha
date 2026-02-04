@@ -6,19 +6,19 @@ import { BRAND } from "@/constants/brand";
 
 export function PublicHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="container flex h-14 items-center justify-between">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 safe-area-padding-x">
+      <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/"
-          className="text-lg font-semibold tracking-tight text-slate-900 hover:text-primary-600"
+          className="min-h-[44px] min-w-[44px] shrink-0 text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600 flex items-center"
         >
           {BRAND.name}
         </Link>
-        <nav className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
+        <nav className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm" className="min-h-[44px] min-w-[44px] px-3">
             <Link href="/login">Sign In</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="min-h-[44px] min-w-[44px] px-3">
             <Link href="/signup">Sign Up</Link>
           </Button>
         </nav>

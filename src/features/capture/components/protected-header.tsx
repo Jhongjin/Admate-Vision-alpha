@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { href: "/capture", label: "촬영", icon: Camera },
-  { href: "/advertisers", label: "광고주 관리", icon: Users },
-  { href: "/reports", label: "보고 목록", icon: FileText },
+  { href: "/advertisers", label: "광고주", icon: Users },
+  { href: "/reports", label: "보고", icon: FileText },
 ] as const;
 
 export function ProtectedHeader() {
@@ -28,42 +28,44 @@ export function ProtectedHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="container flex h-14 items-center justify-between">
+    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 safe-area-padding-x">
+      <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/capture"
-          className="text-lg font-semibold tracking-tight text-slate-900 hover:text-primary-600"
+          className="flex min-h-[44px] min-w-[44px] shrink-0 items-center text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600"
         >
           {BRAND.name} <span className="text-primary-600">Vision</span>
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex flex-1 items-center justify-end gap-0 overflow-x-auto overflow-y-hidden scrollbar-none">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Button
               key={href}
               asChild
               variant={pathname === href ? "secondary" : "ghost"}
               size="sm"
+              className={cn(
+                "min-h-[44px] shrink-0 gap-1.5 px-3",
+                pathname === href && "bg-primary-100 text-primary-700"
+              )}
             >
-              <Link
-                href={href}
-                className={cn(
-                  "gap-2",
-                  pathname === href && "bg-primary-100 text-primary-700"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
+              <Link href={href} className="flex items-center gap-1.5">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{label}</span>
               </Link>
             </Button>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <span className="max-w-[180px] truncate text-sm text-slate-600" title={email ?? undefined}>
-            {profile?.name ? `${profile.name} (${email ?? ""})` : email ?? ""}
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            className="max-w-[100px] truncate text-xs text-slate-600 sm:max-w-[140px]"
+            title={email ?? undefined}
+          >
+            {profile?.name ? `${profile.name}` : email ?? ""}
           </span>
           <Button
             variant="ghost"
             size="icon"
+            className="min-h-[44px] min-w-[44px]"
             onClick={handleClearEmail}
             title="로그아웃"
           >
