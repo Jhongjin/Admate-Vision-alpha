@@ -20,6 +20,9 @@ const CONFIDENCE_THRESHOLD = 0.2;
 /** Exact 매칭 가중치 (fuzzy보다 우선) */
 const EXACT_WEIGHT = 10;
 
+/** Fuzzy 유사도에 쓸 검색어 최소 길이 (짧은 단어는 OCR 노이즈에 잘못 매칭됨 → LG 등 오인식 방지) */
+const MIN_FUZZY_TERM_LENGTH = 4;
+
 /**
  * 정규화: 공백·줄바꿈 축소, 소문자화.
  */
@@ -125,7 +128,11 @@ export function matchOcrToAdvertiser(
         if (len > maxMatchedLen) maxMatchedLen = len;
       }
 
-      const fuzzySim = bestFuzzySimilarity(termNorm, ocrTokens);
+      const termLen = termNorm.length || termNoSpaces.length;
+      const fuzzySim =
+        termLen >= MIN_FUZZY_TERM_LENGTH
+          ? bestFuzzySimilarity(termNorm, ocrTokens)
+          : 0;
       fuzzySum += fuzzySim;
       if (fuzzySim > maxFuzzySim) maxFuzzySim = fuzzySim;
     }
