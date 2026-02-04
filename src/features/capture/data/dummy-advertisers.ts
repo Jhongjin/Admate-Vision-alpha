@@ -31,7 +31,13 @@ export const DUMMY_ADVERTISERS: Advertiser[] = [
     id: "adv-ploud",
     name: "플라우드코리아",
     email: TEST_EMAIL,
-    searchTerms: ["플라우드코리아", "플라우드", "Ploud", "플라우드 코리아"],
+    searchTerms: [
+      "플라우드코리아",
+      "플라우드",
+      "Ploud",
+      "플라우드 코리아",
+      "Ploud Korea",
+    ],
   },
   {
     id: "adv-kakaobank",
@@ -44,6 +50,9 @@ export const DUMMY_ADVERTISERS: Advertiser[] = [
       "카카오뱅크 X",
       "경기신용보증재단",
       "상생보증대출",
+      "소상공인",
+      "보증대출",
+      "상생보증",
     ],
   },
   {
@@ -59,6 +68,9 @@ export const DUMMY_ADVERTISERS: Advertiser[] = [
       "서울 여대",
       "담대하게",
       "admission.swu",
+      "2026학년도",
+      "신편입학",
+      "편입학 모집",
     ],
   },
   {
@@ -68,12 +80,12 @@ export const DUMMY_ADVERTISERS: Advertiser[] = [
     searchTerms: [
       "한국농수산식품유통공사",
       "한국 농수산식품유통공사",
-      "aT",
-      "at",
       "농수산식품유통공사",
       "농수산",
       "농림축산식품부",
       "FSQUARE",
+      "감사가 꽃피는",
+      "꽃을 더하세요",
     ],
   },
   {
@@ -91,6 +103,9 @@ export const DUMMY_ADVERTISERS: Advertiser[] = [
       "식기세척기",
       "DIOS 식기세척기",
       "LG",
+      "구매자 87",
+      "TRUE REPORT",
+      "엘지",
     ],
   },
   {
@@ -134,13 +149,17 @@ export const DUMMY_ADVERTISERS: Advertiser[] = [
     searchTerms: [
       "vip 자산운용",
       "vip자산운용",
+      "vip 자산운영",
       "브이아이피자산운용",
       "브이아이피자산",
+      "브이아이피",
       "VIP 자산운용",
       "VIP Asset",
       "자산운용",
+      "자산운영",
       "직장생활",
       "주식",
+      "그래서 우리가 공부한다",
     ],
   },
 ];

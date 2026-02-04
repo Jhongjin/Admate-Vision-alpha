@@ -28,12 +28,12 @@ describe("matchOcrToAdvertiser", () => {
     expect(vip2?.advertiserName).toBe("브이아이피자산");
   });
 
-  it("matches aT / at for 한국농수산식품유통공사", () => {
-    const at = matchOcrToAdvertiser("aT 한국농수산식품유통공사 FSQUARE", DUMMY_ADVERTISERS);
+  it("matches 한국농수산식품유통공사 when OCR contains 농수산 or FSQUARE", () => {
+    const at = matchOcrToAdvertiser("한국농수산식품유통공사 FSQUARE 감사가 꽃피는", DUMMY_ADVERTISERS);
     expect(at).not.toBeNull();
     expect(at?.advertiserName).toBe("한국농수산식품유통공사");
 
-    const at2 = matchOcrToAdvertiser("at 농수산", DUMMY_ADVERTISERS);
+    const at2 = matchOcrToAdvertiser("농수산 꽃을 더하세요", DUMMY_ADVERTISERS);
     expect(at2).not.toBeNull();
     expect(at2?.advertiserName).toBe("한국농수산식품유통공사");
   });
