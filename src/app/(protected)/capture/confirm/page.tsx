@@ -15,7 +15,7 @@ import {
   isLocationAdSession,
   type CaptureSessionData,
 } from "@/features/capture/constants";
-import { buildCaptureFilename } from "@/features/capture/lib/capture-filename";
+import { buildCaptureFilename, sanitizeFilenamePart } from "@/features/capture/lib/capture-filename";
 import { useAdvertisers } from "@/features/advertisers/hooks/useAdvertisers";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { dataUrlToBlob } from "@/features/capture/lib/dataurl-to-blob";
@@ -34,6 +34,22 @@ const FALLBACK = {
   station: "역명 미인식",
   line: "호선 미인식",
 };
+
+function buildNoLocationFilename(
+  advertiser: string,
+  userEnteredName: string,
+  dateStr: string,
+  index: number
+): string {
+  const adv = sanitizeFilenamePart(advertiser);
+  const user = userEnteredName.trim() ? sanitizeFilenamePart(userEnteredName) : "";
+  const date = /^\d{8}$/.test(dateStr) ? dateStr : dateStr.replace(/\D/g, "").slice(0, 8) || "00000000";
+  const seq = String(Math.max(1, Math.min(99, Math.floor(index)))).padStart(2, "0");
+  const parts = [adv];
+  if (user) parts.push(user);
+  parts.push(date, seq);
+  return `${parts.join("_")}.jpg`;
+}
 
 function runOcr(imageDataUrl: string): Promise<string> {
   return fetch("/api/capture/ocr", {
@@ -190,14 +206,16 @@ export default function CaptureConfirmPage() {
               dateStr,
             });
             const names = ads.map((_, i) =>
-              buildCaptureFilename(
-                advertiser,
-                resolvedLine,
-                resolvedStation,
-                "",
-                dateStr,
-                i + 1
-              )
+              session.skipLocation
+                ? buildNoLocationFilename(advertiser, "", dateStr, i + 1)
+                : buildCaptureFilename(
+                    advertiser,
+                    resolvedLine,
+                    resolvedStation,
+                    "",
+                    dateStr,
+                    i + 1
+                  )
             );
             setGeneratedFilenames(names);
           })
@@ -212,7 +230,9 @@ export default function CaptureConfirmPage() {
             });
             setGeneratedFilenames(
               ads.map((_, i) =>
-                buildCaptureFilename(adv, resolvedLine, resolvedStation, "", dateStr, i + 1)
+                session.skipLocation
+                  ? buildNoLocationFilename(adv, "", dateStr, i + 1)
+                  : buildCaptureFilename(adv, resolvedLine, resolvedStation, "", dateStr, i + 1)
               )
             );
           });
@@ -232,14 +252,16 @@ export default function CaptureConfirmPage() {
       });
       setGeneratedFilenames(
         ads.map((_, i) =>
-          buildCaptureFilename(
-            FALLBACK.advertiser,
-            FALLBACK.line,
-            FALLBACK.station,
-            "",
-            dateStr,
-            i + 1
-          )
+          session.skipLocation
+            ? buildNoLocationFilename(FALLBACK.advertiser, "", dateStr, i + 1)
+            : buildCaptureFilename(
+                FALLBACK.advertiser,
+                FALLBACK.line,
+                FALLBACK.station,
+                "",
+                dateStr,
+                i + 1
+              )
         )
       );
     } finally {
@@ -265,14 +287,21 @@ export default function CaptureConfirmPage() {
     if (!data || !isLocationAdSession(data) || !metaForFilename || !data.adImages.length) return;
     setEditedFilenames(
       data.adImages.map((_, i) =>
-        buildCaptureFilename(
-          metaForFilename.advertiser,
-          metaForFilename.line,
-          metaForFilename.station,
-          userEnteredName,
-          metaForFilename.dateStr,
-          i + 1
-        )
+        data.skipLocation
+          ? buildNoLocationFilename(
+              metaForFilename.advertiser,
+              userEnteredName,
+              metaForFilename.dateStr,
+              i + 1
+            )
+          : buildCaptureFilename(
+              metaForFilename.advertiser,
+              metaForFilename.line,
+              metaForFilename.station,
+              userEnteredName,
+              metaForFilename.dateStr,
+              i + 1
+            )
       )
     );
   }, [userEnteredName, metaForFilename, data]);

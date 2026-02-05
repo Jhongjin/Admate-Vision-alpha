@@ -80,6 +80,19 @@ export async function generateReportPpt(params: ReportPptParams): Promise<Buffer
     border: { pt: 0.5, type: "solid", color: "CCCCCC" },
   });
 
+  slide2.addText(
+    "※ 본 노출량은 서울교통공사 등 공공데이터의 역별 승·하차 인구를 기반으로 한 추정치이며, 실제 광고 노출 수와는 차이가 있을 수 있습니다.",
+    {
+      x: 0.5,
+      y: 2.8,
+      w: 9,
+      h: 0.8,
+      fontSize: 10,
+      color: "666666",
+      align: "left",
+    }
+  );
+
   // 슬라이드 3: 시간대별 (있을 때만)
   if (exposure.byTimeBand && exposure.byTimeBand.length > 0) {
     const slide3 = pptx.addSlide();
