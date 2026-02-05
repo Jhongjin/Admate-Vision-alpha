@@ -21,13 +21,16 @@ export type MatchResult = {
 };
 
 /** 매칭 신뢰도 임계값: 이 이상이면 인식 성공 */
-const CONFIDENCE_THRESHOLD = 0.2;
+const CONFIDENCE_THRESHOLD = 0.4;
 
 /** Exact 매칭 가중치 (fuzzy보다 우선) */
 const EXACT_WEIGHT = 10;
 
 /** Fuzzy 유사도에 쓸 검색어 최소 길이 (짧은 단어는 OCR 노이즈에 잘못 매칭됨 → LG 등 오인식 방지) */
 const MIN_FUZZY_TERM_LENGTH = 4;
+
+/** Exact 매칭에 사용할 최소 검색어 길이 (너무 짧은 단어는 무시) */
+const MIN_EXACT_TERM_LENGTH = 3;
 
 /** 긴 검색어(전체 이름 등)는 OCR 전체 문장과도 유사도 비교 (예: 서울특별시교육청보건안전진흥 vs 진흥원) */
 const LONG_TERM_LENGTH = 10;
@@ -153,13 +156,15 @@ export function matchOcrToAdvertiser(
       const termNoSpaces = normalizeNoSpaces(term);
       if (!termNorm.length && !termNoSpaces.length) continue;
 
+      const termLen = termNorm.length || termNoSpaces.length;
+      // 너무 짧은 검색어(LG, 서울 등)는 OCR 노이즈에 잘 매칭되므로 exact/fuzzy 모두 건너뜀
+      if (termLen < MIN_EXACT_TERM_LENGTH && termLen < MIN_FUZZY_TERM_LENGTH) continue;
+
       if (exactContains(ocrNorm, ocrNoSpaces, termNorm, termNoSpaces)) {
-        const len = termNorm.length || termNoSpaces.length;
-        exactScore += len;
-        if (len > maxMatchedLen) maxMatchedLen = len;
+        exactScore += termLen;
+        if (termLen > maxMatchedLen) maxMatchedLen = termLen;
       }
 
-      const termLen = termNorm.length || termNoSpaces.length;
       const fuzzySim =
         termLen >= MIN_FUZZY_TERM_LENGTH
           ? bestFuzzySimilarity(termNorm, ocrTokens, ocrNorm, ocrNoSpaces)

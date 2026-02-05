@@ -294,6 +294,22 @@ export default function CaptureConfirmPage() {
       : null;
 
   const isMultiSession = data != null && isLocationAdSession(data);
+  const hasResolvedStation =
+    !!stationName &&
+    stationName !== FALLBACK.station &&
+    !!subwayLine &&
+    subwayLine !== FALLBACK.line;
+  const canUsePpt = Boolean(
+    matchedAdvertiserId &&
+    isMultiSession &&
+    !data?.skipLocation &&
+    hasResolvedStation
+  );
+
+  useEffect(() => {
+    if (!canUsePpt && includePpt) setIncludePpt(false);
+  }, [canUsePpt, includePpt]);
+
   const singleCapturedAt = data?.capturedAt ?? data?.locationCapturedAt;
   const capturedAtText = singleCapturedAt
     ? format(new Date(singleCapturedAt), "yyyy-MM-dd HH:mm")
@@ -878,7 +894,7 @@ export default function CaptureConfirmPage() {
       )}
 
       <Card className="border-secondary-200">
-        {(matchedAdvertiserId || advertiserLabel != null) && (
+        {matchedAdvertiserId && (
           <CardContent className="border-b border-secondary-200 py-4 space-y-3">
             <p className="text-sm font-medium text-gray-900">보고 발송 설정</p>
             <div className="flex flex-wrap gap-4">
@@ -914,6 +930,7 @@ export default function CaptureConfirmPage() {
                   id="include-ppt"
                   checked={includePpt}
                   onCheckedChange={(v) => setIncludePpt(v === true)}
+                  disabled={!canUsePpt}
                   className="border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                 />
                 <Label htmlFor="include-ppt" className="text-sm font-medium text-gray-900 cursor-pointer">
@@ -933,6 +950,11 @@ export default function CaptureConfirmPage() {
                     className="h-9 w-20 border-slate-300 bg-white text-gray-900"
                   />
                 </div>
+              )}
+              {!canUsePpt && (
+                <p className="w-full text-xs text-slate-500">
+                  역명·호선과 광고주가 모두 인식된 위치 세션에서만 사용 가능합니다. (위치 없음 세션에서는 사용 불가)
+                </p>
               )}
             </div>
           </CardContent>

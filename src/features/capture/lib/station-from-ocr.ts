@@ -20,15 +20,43 @@ function lineFromStationNumber(num: number): string | null {
   return null;
 }
 
-/** 한글만 추출 (2~4자 역명 후보) */
+/** 역명으로 쓰이면 안 되는 문구 (요청/채팅 등이 OCR에 섞였을 때 차단) */
+const INVALID_STATION_PHRASES = [
+  "배포에줘",
+  "배포해줘",
+  "배포해주",
+  "배포에주",
+];
+
+function isInvalidStationName(name: string): boolean {
+  const n = name.replace(/\s/g, "");
+  return INVALID_STATION_PHRASES.some((phrase) => n.includes(phrase) || phrase.includes(n));
+}
+
+/** 한글만 추출 (2~4자 역명 후보). 역번호 인근 한글을 우선. */
 function extractKoreanStationName(text: string): string | null {
   const koreanBlock = /[\uAC00-\uD7A3]+/g;
   const matches = text.match(koreanBlock);
   if (!matches || matches.length === 0) return null;
-  const candidates = matches.filter((m) => m.length >= 2 && m.length <= 5);
+  let candidates = matches.filter((m) => m.length >= 2 && m.length <= 5);
+  candidates = candidates.filter((m) => !isInvalidStationName(m.replace(/\s/g, "")));
   if (candidates.length === 0) return null;
-  const best = candidates.find((m) => m.length >= 2 && m.length <= 4);
-  return (best ?? candidates[0]).replace(/\s/g, "");
+  const stationNumber = extractStationNumber(text);
+  if (stationNumber != null) {
+    const numStr = String(stationNumber);
+    const idx = text.indexOf(numStr);
+    if (idx >= 0) {
+      const afterNum = text.slice(idx + numStr.length);
+      const afterKorean = afterNum.match(koreanBlock);
+      if (afterKorean?.length) {
+        const near = afterKorean[0].replace(/\s/g, "");
+        if (near.length >= 2 && near.length <= 4 && !isInvalidStationName(near)) return near;
+      }
+    }
+  }
+  const best = candidates.find((m) => m.length >= 2 && m.length <= 4) ?? candidates[0];
+  const cleaned = (best ?? candidates[0]).replace(/\s/g, "");
+  return isInvalidStationName(cleaned) ? null : cleaned;
 }
 
 /** 3자리 숫자 추출 (역번호) */

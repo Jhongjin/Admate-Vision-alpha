@@ -61,4 +61,15 @@ describe("matchOcrToAdvertiser", () => {
     expect(kb).not.toBeNull();
     expect(kb?.advertiserName).toBe("카카오뱅크");
   });
+
+  it("prefers 서울특별시교육청보건안전진흥원 over 서울여자대학교 when OCR has full name (DB-like: name only terms)", () => {
+    const dbLike = [
+      { id: "id-a", name: "서울특별시교육청보건안전진흥원", searchTerms: [] as string[] },
+      { id: "id-b", name: "서울여자대학교", searchTerms: [] as string[] },
+    ];
+    const ocr = "서울특별시교육청보건안전진흥원 함께 만들어가요 건강한 서울 학교";
+    const match = matchOcrToAdvertiser(ocr, dbLike);
+    expect(match).not.toBeNull();
+    expect(match?.advertiserName).toBe("서울특별시교육청보건안전진흥원");
+  });
 });
