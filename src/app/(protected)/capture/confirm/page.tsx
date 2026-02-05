@@ -878,9 +878,9 @@ export default function CaptureConfirmPage() {
       )}
 
       <Card className="border-secondary-200">
-        {matchedAdvertiserId && (
+        {(matchedAdvertiserId || advertiserLabel != null) && (
           <CardContent className="border-b border-secondary-200 py-4 space-y-3">
-            <p className="text-sm font-medium text-gray-700">보고 발송 설정</p>
+            <p className="text-sm font-medium text-gray-900">보고 발송 설정</p>
             <div className="flex flex-wrap gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs text-slate-600">수신자</Label>
@@ -905,20 +905,24 @@ export default function CaptureConfirmPage() {
                 </select>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-secondary-100">
+            <div
+              className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t-2 border-slate-200 bg-slate-50/80 rounded-lg px-4 py-3"
+              data-report-ppt-section
+            >
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-ppt"
                   checked={includePpt}
                   onCheckedChange={(v) => setIncludePpt(v === true)}
+                  className="border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                 />
-                <Label htmlFor="include-ppt" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <Label htmlFor="include-ppt" className="text-sm font-medium text-gray-900 cursor-pointer">
                   PPT 노출량 보고서 포함 (역·호선 유동인구 기반)
                 </Label>
               </div>
               {includePpt && (
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="display-days" className="text-xs text-slate-600">게재 기간(일)</Label>
+                  <Label htmlFor="display-days" className="text-xs text-slate-700">게재 기간(일)</Label>
                   <Input
                     id="display-days"
                     type="number"
@@ -926,7 +930,7 @@ export default function CaptureConfirmPage() {
                     max={365}
                     value={displayDays}
                     onChange={(e) => setDisplayDays(Math.max(1, Math.min(365, Number(e.target.value) || 7)))}
-                    className="h-9 w-20"
+                    className="h-9 w-20 border-slate-300 bg-white text-gray-900"
                   />
                 </div>
               )}

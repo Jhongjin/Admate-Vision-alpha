@@ -173,12 +173,14 @@ export function matchOcrToAdvertiser(
 
     if (combined <= 0) continue;
 
-    if (
+    const prevCombined = best ? best.exactScore * EXACT_WEIGHT + best.fuzzyScore : 0;
+    const wins =
       !best ||
-      combined > best.exactScore * EXACT_WEIGHT + best.fuzzyScore ||
-      (combined === best.exactScore * EXACT_WEIGHT + best.fuzzyScore &&
-        maxFuzzySim > best.maxFuzzySim)
-    ) {
+      combined > prevCombined ||
+      (combined === prevCombined &&
+        (maxMatchedLen > (best?.maxMatchedLen ?? 0) ||
+          (maxMatchedLen === (best?.maxMatchedLen ?? 0) && maxFuzzySim > (best?.maxFuzzySim ?? 0))));
+    if (wins) {
       best = {
         advertiser,
         exactScore,
