@@ -1,22 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { MapPin, Building2, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import JSZip from "jszip";
+import { MapPin, Building2, Send, FileImage, Download, Replace, RotateCcw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { CAPTURE_SESSION_KEY } from "@/features/capture/constants";
-import type { CaptureSessionData } from "@/features/capture/constants";
-import { DUMMY_ADVERTISERS } from "@/features/capture/data/dummy-advertisers";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  CAPTURE_SESSION_KEY,
+  isLocationAdSession,
+  type CaptureSessionData,
+} from "@/features/capture/constants";
+import { buildCaptureFilename } from "@/features/capture/lib/capture-filename";
+import { useAdvertisers } from "@/features/advertisers/hooks/useAdvertisers";
+import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
+import { dataUrlToBlob } from "@/features/capture/lib/dataurl-to-blob";
+import { rotateDataUrl, type RotateDirection } from "@/features/capture/lib/rotate-dataurl";
 import { extractTextFromImage } from "@/features/capture/lib/ocr";
-import { matchOcrToAdvertiser } from "@/features/capture/lib/match-advertiser";
+import { matchOcrToAdvertiser, type AdvertiserForMatch } from "@/features/capture/lib/match-advertiser";
 import { reverseGeocode } from "@/features/capture/lib/reverse-geocode";
+import { parseStationFromOcr } from "@/features/capture/lib/station-from-ocr";
+import { getSubwayLineFromImage } from "@/features/capture/lib/subway-line-color";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const FALLBACK = {
   location: "위치 정보 없음",
   advertiser: "광고주 미인식",
+  station: "역명 미인식",
+  line: "호선 미인식",
 };
+
+function runOcr(imageDataUrl: string): Promise<string> {
+  return fetch("/api/capture/ocr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageDataUrl }),
+  })
+    .then((res) => {
+      if (res.ok) return res.json() as Promise<{ text: string }>;
+      return Promise.reject(new Error("Server OCR unavailable"));
+    })
+    .then((body) => body.text)
+    .catch(() => extractTextFromImage(imageDataUrl).then((ocr) => ocr.text));
+}
 
 export default function CaptureConfirmPage() {
   const [data, setData] = useState<CaptureSessionData | null>(null);
@@ -24,13 +55,45 @@ export default function CaptureConfirmPage() {
   const [addressLoading, setAddressLoading] = useState(false);
   const [advertiserLabel, setAdvertiserLabel] = useState<string | null>(null);
   const [advertiserLoading, setAdvertiserLoading] = useState(false);
+  /** 위치+광고 세션: 역명·호선·파일명 목록 */
+  const [stationName, setStationName] = useState<string | null>(null);
+  const [subwayLine, setSubwayLine] = useState<string | null>(null);
+  const [generatedFilenames, setGeneratedFilenames] = useState<string[]>([]);
+  const [editedFilenames, setEditedFilenames] = useState<string[]>([]);
+  const [userEnteredName, setUserEnteredName] = useState("");
+  const [metaForFilename, setMetaForFilename] = useState<{
+    advertiser: string;
+    line: string;
+    station: string;
+    dateStr: string;
+  } | null>(null);
+  /** 매칭된 광고주 ID (보고 발송 시 수신자 조회용) */
+  const [matchedAdvertiserId, setMatchedAdvertiserId] = useState<string | null>(null);
+  /** 보고 메일 수신자: 광고주 담당자(참조에 캠페인) / 캠페인 담당자(참조 공란) */
+  const [primaryRecipient, setPrimaryRecipient] = useState<"advertiser" | "campaign">("campaign");
+  /** 발신자 표기: 로그인 사용자 이름 / 캠페인 담당자 이름 */
+  const [senderNameOption, setSenderNameOption] = useState<"user" | "campaign">("user");
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  /** 광고 사진 회전용: 선택된 이미지 인덱스 (전체선택·회전 적용 대상) */
+  const [selectedImageIndices, setSelectedImageIndices] = useState<Set<number>>(new Set());
+  const [imageRotating, setImageRotating] = useState(false);
+  const [bulkFind, setBulkFind] = useState("");
+  const [bulkReplace, setBulkReplace] = useState("");
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [reportSending, setReportSending] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+  const { data: advertisersData } = useAdvertisers();
+  const advertisers = advertisersData ?? [];
+  const { profile } = useUserProfile();
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(CAPTURE_SESSION_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as CaptureSessionData;
-        if (parsed.imageDataUrl) setData(parsed);
+        if (parsed.imageDataUrl || isLocationAdSession(parsed)) setData(parsed);
       }
     } catch {
       /* ignore */
@@ -38,7 +101,8 @@ export default function CaptureConfirmPage() {
   }, []);
 
   useEffect(() => {
-    if (data?.lat == null || data?.lng == null) return;
+    if (!data) return;
+    if (data.lat == null || data.lng == null) return;
     setAddressLoading(true);
     setAddressLabel(null);
     reverseGeocode(data.lat, data.lng)
@@ -47,55 +111,444 @@ export default function CaptureConfirmPage() {
       .finally(() => setAddressLoading(false));
   }, [data?.lat, data?.lng]);
 
+  /** 단일 이미지: 광고주 OCR (Supabase 광고주 목록만 사용) */
   useEffect(() => {
-    if (!data?.imageDataUrl) return;
+    if (!data?.imageDataUrl || isLocationAdSession(data)) return;
     setAdvertiserLoading(true);
     setAdvertiserLabel(null);
-
-    const runOcrThenMatch = (ocrText: string) => {
-      const match = matchOcrToAdvertiser(ocrText, DUMMY_ADVERTISERS);
-      setAdvertiserLabel(match ? match.advertiserName : null);
-    };
-
     const imageDataUrl = data.imageDataUrl;
-
-    fetch("/api/capture/ocr", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageDataUrl }),
-    })
-      .then((res) => {
-        if (res.ok) return res.json() as Promise<{ text: string }>;
-        return Promise.reject(new Error("Server OCR unavailable"));
+    runOcr(imageDataUrl)
+      .then((text) => {
+        const match = matchOcrToAdvertiser(text, advertisers);
+        setAdvertiserLabel(match ? match.advertiserName : null);
+        setMatchedAdvertiserId(match ? match.advertiserId : null);
       })
-      .then((body) => runOcrThenMatch(body.text))
-      .catch(() =>
-        extractTextFromImage(imageDataUrl).then((ocr) =>
-          runOcrThenMatch(ocr.text)
+      .catch(() => {
+        setAdvertiserLabel(null);
+        setMatchedAdvertiserId(null);
+      })
+      .finally(() => setAdvertiserLoading(false));
+  }, [data?.imageDataUrl, data?.locationImage, advertisers]);
+
+  /** 위치+광고 또는 위치없음+광고 세션: 역명·호선(있을 때만 OCR) → 광고주(첫 광고 이미지, Supabase 목록만 사용) → 파일명 생성 */
+  const resolveMultiSessionMeta = useCallback(async (
+    session: CaptureSessionData & { adImages: { imageDataUrl: string; capturedAt: string }[] },
+    advertiserList: AdvertiserForMatch[]
+  ) => {
+    setMetaLoading(true);
+    setStationName(null);
+    setSubwayLine(null);
+    setAdvertiserLabel(null);
+    setMatchedAdvertiserId(null);
+    setGeneratedFilenames([]);
+    setMetaForFilename(null);
+
+    const ads = session.adImages;
+    const dateFromFirst = session.locationCapturedAt ?? ads[0]?.capturedAt;
+    const dateStr = dateFromFirst
+      ? format(new Date(dateFromFirst), "yyyyMMdd")
+      : format(new Date(), "yyyyMMdd");
+
+    let resolvedStation = FALLBACK.station;
+    let resolvedLine = FALLBACK.line;
+
+    if (session.locationImage) {
+      try {
+        const [locOcrText, lineFromColor] = await Promise.all([
+          runOcr(session.locationImage),
+          getSubwayLineFromImage(session.locationImage),
+        ]);
+        const station = parseStationFromOcr(locOcrText);
+        resolvedStation = station.stationName ?? FALLBACK.station;
+        resolvedLine = station.line ?? lineFromColor ?? FALLBACK.line;
+        setStationName(resolvedStation);
+        setSubwayLine(resolvedLine);
+      } catch {
+        setStationName(FALLBACK.station);
+        setSubwayLine(FALLBACK.line);
+      }
+    } else {
+      setStationName(FALLBACK.station);
+      setSubwayLine(FALLBACK.line);
+    }
+
+    try {
+      const firstAdUrl = ads[0]?.imageDataUrl;
+      if (firstAdUrl) {
+        runOcr(firstAdUrl)
+          .then((adOcrText) => {
+            const match = matchOcrToAdvertiser(adOcrText, advertiserList);
+            const advertiser = match ? match.advertiserName : FALLBACK.advertiser;
+            setAdvertiserLabel(match ? match.advertiserName : null);
+            setMatchedAdvertiserId(match ? match.advertiserId : null);
+            setMetaForFilename({
+              advertiser,
+              line: resolvedLine,
+              station: resolvedStation,
+              dateStr,
+            });
+            const names = ads.map((_, i) =>
+              buildCaptureFilename(
+                advertiser,
+                resolvedLine,
+                resolvedStation,
+                "",
+                dateStr,
+                i + 1
+              )
+            );
+            setGeneratedFilenames(names);
+          })
+          .catch(() => {
+            const adv = FALLBACK.advertiser;
+            setMatchedAdvertiserId(null);
+            setMetaForFilename({
+              advertiser: adv,
+              line: resolvedLine,
+              station: resolvedStation,
+              dateStr,
+            });
+            setGeneratedFilenames(
+              ads.map((_, i) =>
+                buildCaptureFilename(adv, resolvedLine, resolvedStation, "", dateStr, i + 1)
+              )
+            );
+          });
+      } else {
+        setGeneratedFilenames([]);
+      }
+    } catch {
+      setStationName(FALLBACK.station);
+      setSubwayLine(FALLBACK.line);
+      setAdvertiserLabel(null);
+      setMatchedAdvertiserId(null);
+      setMetaForFilename({
+        advertiser: FALLBACK.advertiser,
+        line: FALLBACK.line,
+        station: FALLBACK.station,
+        dateStr,
+      });
+      setGeneratedFilenames(
+        ads.map((_, i) =>
+          buildCaptureFilename(
+            FALLBACK.advertiser,
+            FALLBACK.line,
+            FALLBACK.station,
+            "",
+            dateStr,
+            i + 1
+          )
+        )
+      );
+    } finally {
+      setMetaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!data || !isLocationAdSession(data)) return;
+    resolveMultiSessionMeta(data, advertisers);
+  }, [data, advertisers, resolveMultiSessionMeta]);
+
+  /** 자동 생성된 파일명이 바뀌면 편집용 목록도 동기화 */
+  useEffect(() => {
+    if (generatedFilenames.length > 0) {
+      setEditedFilenames([...generatedFilenames]);
+      setSelectedIndices(new Set(generatedFilenames.map((_, i) => i)));
+    }
+  }, [generatedFilenames]);
+
+  /** 사용자직접기입명 또는 meta 변경 시 파일명 목록 재생성 (일괄 적용) */
+  useEffect(() => {
+    if (!data || !isLocationAdSession(data) || !metaForFilename || !data.adImages.length) return;
+    setEditedFilenames(
+      data.adImages.map((_, i) =>
+        buildCaptureFilename(
+          metaForFilename.advertiser,
+          metaForFilename.line,
+          metaForFilename.station,
+          userEnteredName,
+          metaForFilename.dateStr,
+          i + 1
         )
       )
-      .catch(() => setAdvertiserLabel(null))
-      .finally(() => setAdvertiserLoading(false));
-  }, [data?.imageDataUrl]);
+    );
+  }, [userEnteredName, metaForFilename, data]);
 
   const hasGps = data?.lat != null && data?.lng != null;
   const locationText = (() => {
-    if (!hasGps) return FALLBACK.location;
+    if (!hasGps || data?.lat == null || data?.lng == null) return FALLBACK.location;
     if (addressLoading) return "주소 조회 중...";
     if (addressLabel) return addressLabel;
-    return `${data!.lat.toFixed(6)}, ${data!.lng.toFixed(6)}`;
+    return `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
   })();
   const accuracyText =
     hasGps && data?.accuracy != null
       ? ` · 약 ±${Math.round(data.accuracy)}m`
       : "";
   const mapsUrl =
-    hasGps
-      ? `https://www.google.com/maps?q=${data!.lat},${data!.lng}`
+    hasGps && data?.lat != null && data?.lng != null
+      ? `https://www.google.com/maps?q=${data.lat},${data.lng}`
       : null;
-  const capturedAtText = data?.capturedAt
-    ? format(new Date(data.capturedAt), "yyyy-MM-dd HH:mm")
+
+  const isMultiSession = data != null && isLocationAdSession(data);
+  const singleCapturedAt = data?.capturedAt ?? data?.locationCapturedAt;
+  const capturedAtText = singleCapturedAt
+    ? format(new Date(singleCapturedAt), "yyyy-MM-dd HH:mm")
     : "-";
+
+  const toggleSelectIndex = useCallback((index: number) => {
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIndices(new Set(editedFilenames.map((_, i) => i)));
+  }, [editedFilenames.length]);
+
+  const selectAllImages = useCallback(() => {
+    if (!data?.adImages?.length) return;
+    setSelectedImageIndices(new Set(data.adImages.map((_, i) => i)));
+  }, [data?.adImages?.length]);
+
+  const toggleImageSelection = useCallback((index: number) => {
+    setSelectedImageIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
+
+  const applyRotatedImage = useCallback((index: number, newDataUrl: string) => {
+    if (!data?.adImages) return;
+    const next = data.adImages.map((ad, i) =>
+      i === index ? { ...ad, imageDataUrl: newDataUrl } : ad
+    );
+    const nextData: CaptureSessionData = { ...data, adImages: next };
+    setData(nextData);
+    try {
+      sessionStorage.setItem(CAPTURE_SESSION_KEY, JSON.stringify(nextData));
+    } catch {
+      /* ignore */
+    }
+  }, [data]);
+
+  const rotateImageAt = useCallback(
+    async (index: number, direction: RotateDirection) => {
+      if (!data?.adImages?.[index] || imageRotating) return;
+      setImageRotating(true);
+      try {
+        const rotated = await rotateDataUrl(data.adImages[index].imageDataUrl, direction);
+        applyRotatedImage(index, rotated);
+        toast({ description: direction === "right" ? "오른쪽 90° 회전 적용" : "왼쪽 90° 회전 적용" });
+      } catch {
+        toast({ title: "회전 실패", variant: "destructive" });
+      } finally {
+        setImageRotating(false);
+      }
+    },
+    [data?.adImages, imageRotating, applyRotatedImage, toast]
+  );
+
+  const rotateSelected = useCallback(
+    async (direction: RotateDirection) => {
+      if (selectedImageIndices.size === 0) {
+        toast({ description: "회전할 사진을 선택해 주세요.", variant: "destructive" });
+        return;
+      }
+      if (!data?.adImages) return;
+      setImageRotating(true);
+      try {
+        const indices = Array.from(selectedImageIndices).sort((a, b) => a - b);
+        let nextImages = [...data.adImages];
+        for (const i of indices) {
+          const rotated = await rotateDataUrl(nextImages[i].imageDataUrl, direction);
+          nextImages = nextImages.map((ad, j) => (j === i ? { ...ad, imageDataUrl: rotated } : ad));
+        }
+        const nextData: CaptureSessionData = { ...data, adImages: nextImages };
+        setData(nextData);
+        try {
+          sessionStorage.setItem(CAPTURE_SESSION_KEY, JSON.stringify(nextData));
+        } catch {
+          /* ignore */
+        }
+        toast({ description: `${indices.length}장 회전 적용됨` });
+      } catch {
+        toast({ title: "회전 실패", variant: "destructive" });
+      } finally {
+        setImageRotating(false);
+      }
+    },
+    [data, selectedImageIndices, toast]
+  );
+
+  const applyBulkReplace = useCallback(
+    (target: "all" | "selected") => {
+      const find = bulkFind.trim();
+      if (!find) {
+        toast({ title: "찾을 문자열을 입력해 주세요.", variant: "destructive" });
+        return;
+      }
+      setEditedFilenames((prev) =>
+        prev.map((name, i) => {
+          const apply = target === "all" || selectedIndices.has(i);
+          if (!apply) return name;
+          return name.split(find).join(bulkReplace);
+        })
+      );
+      toast({ title: "일괄 수정 적용됨" });
+    },
+    [bulkFind, bulkReplace, selectedIndices, toast]
+  );
+
+  const setEditedFilenameAt = useCallback((index: number, value: string) => {
+    setEditedFilenames((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }, []);
+
+  const handleDownloadZip = useCallback(async () => {
+    if (!isMultiSession || !data?.adImages || editedFilenames.length === 0) return;
+    setDownloadLoading(true);
+    try {
+      const zip = new JSZip();
+      for (let i = 0; i < data.adImages.length; i++) {
+        const blob = dataUrlToBlob(data.adImages[i].imageDataUrl);
+        const name = editedFilenames[i] ?? `image_${String(i + 1).padStart(2, "0")}.jpg`;
+        zip.file(name, blob);
+      }
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const advertiserRaw = metaForFilename?.advertiser ?? advertiserLabel ?? "광고주미인식";
+      const advertiserSafe = advertiserRaw.replace(/[/\\:*?"<>|]/g, "_").trim() || "광고주미인식";
+      a.download = `${advertiserSafe}_촬영_${format(new Date(), "yyyyMMdd_HHmm")}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "ZIP 다운로드 완료" });
+    } catch (e) {
+      toast({
+        title: "다운로드 실패",
+        description: e instanceof Error ? e.message : "ZIP 생성 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadLoading(false);
+    }
+  }, [isMultiSession, data?.adImages, editedFilenames, metaForFilename?.advertiser, advertiserLabel, toast]);
+
+  const handleSendReport = useCallback(async () => {
+    if (!matchedAdvertiserId) {
+      toast({
+        title: "보고 발송 불가",
+        description: "광고주가 인식된 촬영만 보고 발송할 수 있습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setReportSending(true);
+    try {
+      let zipBase64: string | undefined;
+      let zipFilename: string | undefined;
+      if (isMultiSession && data?.adImages && editedFilenames.length > 0) {
+        const zip = new JSZip();
+        for (let i = 0; i < data.adImages.length; i++) {
+          const blob = dataUrlToBlob(data.adImages[i].imageDataUrl);
+          const name = editedFilenames[i] ?? `image_${String(i + 1).padStart(2, "0")}.jpg`;
+          zip.file(name, blob);
+        }
+        const blob = await zip.generateAsync({ type: "blob" });
+        zipBase64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => {
+            const dataUrl = r.result as string;
+            res(dataUrl.split(",")[1] ?? "");
+          };
+          r.onerror = rej;
+          r.readAsDataURL(blob);
+        });
+        const advSafe = (metaForFilename?.advertiser ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "광고주미인식";
+        zipFilename = `${advSafe}_촬영_${metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd")}_${format(new Date(), "HHmm")}.zip`;
+      }
+      const res = await fetch("/api/capture/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          advertiserId: matchedAdvertiserId,
+          advertiserName: metaForFilename?.advertiser ?? advertiserLabel ?? undefined,
+          primaryRecipient,
+          senderNameOption,
+          loginUserName: profile?.name ?? "",
+          userEnteredName: userEnteredName.trim() || undefined,
+          station: stationName ?? metaForFilename?.station ?? undefined,
+          line: subwayLine ?? metaForFilename?.line ?? undefined,
+          dateStr: metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd"),
+          zipBase64,
+          zipFilename,
+        }),
+      });
+      let json: { ok?: boolean; message?: string; error?: string };
+      try {
+        json = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+      } catch {
+        toast({
+          title: "발송 실패",
+          description: "서버 응답을 확인할 수 없습니다. 네트워크 또는 서버 오류일 수 있습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (res.ok && json.ok) {
+        toast({ title: "보고 발송 완료", description: json.message });
+        router.push("/reports");
+      } else {
+        toast({
+          title: "발송 실패",
+          description: json.message ?? json.error ?? "이메일 발송에 실패했습니다.",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "발송 중 오류가 발생했습니다.";
+      toast({ title: "발송 실패", description: msg, variant: "destructive" });
+    } finally {
+      setReportSending(false);
+    }
+  }, [
+    matchedAdvertiserId,
+    isMultiSession,
+    data?.adImages,
+    editedFilenames,
+    metaForFilename,
+    stationName,
+    subwayLine,
+    advertiserLabel,
+    primaryRecipient,
+    senderNameOption,
+    userEnteredName,
+    profile?.name,
+    toast,
+    router,
+  ]);
+
+  if (!data) {
+    return (
+      <div className="container py-8">
+        <p className="text-secondary-500">촬영 데이터가 없습니다. 촬영 화면에서 다시 촬영해 주세요.</p>
+        <Button asChild className="mt-4">
+          <Link href="/capture">촬영하기</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">
@@ -103,63 +556,358 @@ export default function CaptureConfirmPage() {
         <h1 className="text-2xl font-bold text-gray-900">촬영 확인</h1>
         <p className="mt-1 text-secondary-500">
           촬영 내용을 확인한 뒤 보고를 발송하세요.
+          {isMultiSession && " 저장 시 아래 파일명이 적용됩니다."}
         </p>
       </header>
 
-      <Card className="overflow-hidden border-secondary-200">
-        <div className="relative aspect-video w-full bg-gray-100">
-          {data?.imageDataUrl ? (
-            <img
-              src={data.imageDataUrl}
-              alt="촬영 이미지"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-secondary-500">
-              촬영 데이터가 없습니다. 촬영 화면에서 다시 촬영해 주세요.
-            </div>
+      {isMultiSession ? (
+        <>
+          {data.skipLocation && (
+            <Card className="mb-6 border-amber-200 bg-amber-50/50">
+              <CardHeader className="pb-2">
+                <span className="text-sm font-medium text-amber-800">위치 없음 세션</span>
+              </CardHeader>
+              <CardContent className="text-sm text-amber-700">
+                역명·호선은 미촬영 상태로 &quot;역명 미인식&quot;, &quot;호선 미인식&quot;으로 표시됩니다.
+              </CardContent>
+            </Card>
           )}
-        </div>
-        <CardHeader>
-          <CardContent className="space-y-3 p-0">
-            <div className="flex flex-col gap-1 text-sm">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 shrink-0 text-secondary-500" />
+          {data.locationImage && (
+            <Card className="mb-6 overflow-hidden border-secondary-200">
+              <CardHeader className="pb-2">
+                <span className="text-sm font-medium text-secondary-600">위치(역명) 사진</span>
+              </CardHeader>
+              <div className="relative aspect-video w-full bg-gray-100">
+                <img
+                  src={data.locationImage}
+                  alt="역명판"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              {(metaLoading || stationName != null || subwayLine != null) && (
+                <CardContent className="space-y-1 pt-2 text-sm">
+                  {metaLoading ? (
+                    <p className="text-secondary-500">역명·호선 인식 중...</p>
+                  ) : (
+                    <>
+                      <p className="text-gray-700">
+                        <span className="font-medium">역명:</span> {stationName ?? FALLBACK.station}
+                      </p>
+                      <p className="text-gray-700">
+                        <span className="font-medium">호선:</span> {subwayLine ?? FALLBACK.line}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          <Card className="mb-6 overflow-hidden border-secondary-200">
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium text-secondary-600">광고 사진 ({data.adImages.length}장)</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={selectAllImages}
+                  >
+                    전체 선택
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 text-xs"
+                    disabled={selectedImageIndices.size === 0 || imageRotating}
+                    onClick={() => rotateSelected("left")}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    왼쪽 90°
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 text-xs"
+                    disabled={selectedImageIndices.size === 0 || imageRotating}
+                    onClick={() => rotateSelected("right")}
+                  >
+                    <RotateCw className="h-3.5 w-3.5" />
+                    오른쪽 90°
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3">
+              {data.adImages.map((ad, i) => (
+                <div key={i} className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                  <label className="absolute left-1.5 top-1.5 z-10 flex items-center gap-1 rounded bg-black/50 p-1">
+                    <Checkbox
+                      checked={selectedImageIndices.has(i)}
+                      onCheckedChange={() => toggleImageSelection(i)}
+                      className="border-white data-[state=checked]:bg-white data-[state=checked]:text-gray-900"
+                    />
+                    <span className="text-xs text-white">{(i + 1).toString()}</span>
+                  </label>
+                  <img
+                    src={ad.imageDataUrl}
+                    alt={`광고 ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute bottom-1.5 right-1.5 flex gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70"
+                      disabled={imageRotating}
+                      onClick={() => rotateImageAt(i, "left")}
+                      title="왼쪽 90° 회전"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70"
+                      disabled={imageRotating}
+                      onClick={() => rotateImageAt(i, "right")}
+                      title="오른쪽 90° 회전"
+                    >
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {editedFilenames.length > 0 && (
+              <CardContent className="border-t border-secondary-200 pt-4 space-y-4">
+                <div>
+                  <Label htmlFor="user-entered-name" className="text-sm font-medium text-gray-700">
+                    사용자직접기입명 (추가 이름)
+                  </Label>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    파일명에 일괄 추가됩니다. 예: DL16 입력 시 …_공덕_DL16_20260203_01.jpg
+                  </p>
+                  <Input
+                    id="user-entered-name"
+                    placeholder="예: DL16"
+                    value={userEnteredName}
+                    onChange={(e) => setUserEnteredName(e.target.value)}
+                    className="mt-1.5 max-w-xs"
+                  />
+                </div>
+
+                <p className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <FileImage className="h-4 w-4" />
+                  저장 파일명 (다운로드·업로드 시 적용)
+                </p>
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-600">일괄 수정</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={selectAll}
+                    >
+                      전체 선택
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-end">
+                    <div className="flex-1 min-w-[100px]">
+                      <Label className="text-xs text-slate-600">찾을 문자열</Label>
+                      <Input
+                        placeholder="예: 5호선"
+                        value={bulkFind}
+                        onChange={(e) => setBulkFind(e.target.value)}
+                        className="h-8 text-sm mt-0.5"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[100px]">
+                      <Label className="text-xs text-slate-600">바꿀 문자열</Label>
+                      <Input
+                        placeholder="예: 8호선"
+                        value={bulkReplace}
+                        onChange={(e) => setBulkReplace(e.target.value)}
+                        className="h-8 text-sm mt-0.5"
+                      />
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1"
+                        onClick={() => applyBulkReplace("selected")}
+                      >
+                        <Replace className="h-3.5 w-3.5" />
+                        선택 항목에 적용
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => applyBulkReplace("all")}
+                      >
+                        전체 적용
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <ul className="space-y-2 max-h-48 overflow-y-auto">
+                  {editedFilenames.map((name, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`fn-check-${i}`}
+                        checked={selectedIndices.has(i)}
+                        onCheckedChange={() => toggleSelectIndex(i)}
+                        className="shrink-0"
+                      />
+                      <Input
+                        id={`fn-${i}`}
+                        value={name}
+                        onChange={(e) => setEditedFilenameAt(i, e.target.value)}
+                        className="h-8 text-xs font-mono flex-1 min-w-0"
+                        placeholder="파일명"
+                      />
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={downloadLoading || editedFilenames.length === 0}
+                    onClick={handleDownloadZip}
+                  >
+                    <Download className="h-4 w-4" />
+                    {downloadLoading ? "준비 중…" : "ZIP 다운로드"}
+                  </Button>
+                </div>
+
+                {advertiserLabel != null && (
+                  <p className="text-sm text-gray-600">
+                    <Building2 className="inline h-4 w-4 align-middle" /> 인식 광고주: {advertiserLabel}
+                  </p>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        </>
+      ) : (
+        <Card className="mb-6 overflow-hidden border-secondary-200">
+          <div className="relative aspect-video w-full bg-gray-100">
+            {data.imageDataUrl ? (
+              <img
+                src={data.imageDataUrl}
+                alt="촬영 이미지"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-secondary-500">
+                촬영 데이터가 없습니다.
+              </div>
+            )}
+          </div>
+          <CardHeader>
+            <CardContent className="space-y-3 p-0">
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 shrink-0 text-secondary-500" />
+                  <span className="text-gray-700">
+                    {locationText}
+                    {accuracyText}
+                  </span>
+                </div>
+                {mapsUrl && (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary-500 hover:underline"
+                  >
+                    지도에서 보기
+                  </a>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Building2 className="h-4 w-4 shrink-0 text-secondary-500" />
                 <span className="text-gray-700">
-                  {locationText}
-                  {accuracyText}
+                  {advertiserLoading
+                    ? "광고주 인식 중..."
+                    : advertiserLabel ?? FALLBACK.advertiser}
                 </span>
               </div>
-              {mapsUrl && (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary-500 hover:underline"
+              <p className="text-xs text-secondary-500">
+                촬영 시각: {capturedAtText}
+              </p>
+            </CardContent>
+          </CardHeader>
+        </Card>
+      )}
+
+      <Card className="border-secondary-200">
+        {matchedAdvertiserId && (
+          <CardContent className="border-b border-secondary-200 py-4 space-y-3">
+            <p className="text-sm font-medium text-gray-700">보고 발송 설정</p>
+            <div className="flex flex-wrap gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-600">수신자</Label>
+                <select
+                  value={primaryRecipient}
+                  onChange={(e) => setPrimaryRecipient(e.target.value as "advertiser" | "campaign")}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  지도에서 보기
-                </a>
-              )}
+                  <option value="advertiser">광고주 담당자 (참조: 캠페인 담당자)</option>
+                  <option value="campaign">캠페인 담당자 (참조: 공란)</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-600">발신자 표기</Label>
+                <select
+                  value={senderNameOption}
+                  onChange={(e) => setSenderNameOption(e.target.value as "user" | "campaign")}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="user">로그인 사용자 이름 ({profile?.name ?? "-"})</option>
+                  <option value="campaign">캠페인 담당자 이름</option>
+                </select>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Building2 className="h-4 w-4 shrink-0 text-secondary-500" />
-              <span className="text-gray-700">
-                {advertiserLoading
-                  ? "광고주 인식 중..."
-                  : advertiserLabel ?? FALLBACK.advertiser}
-              </span>
-            </div>
-            <p className="text-xs text-secondary-500">
-              촬영 시각: {capturedAtText}
-            </p>
           </CardContent>
-        </CardHeader>
-        <CardFooter className="flex gap-3 border-t border-secondary-200 pt-6">
-          <Button asChild size="lg" className="gap-2">
-            <Link href="/reports">
-              <Send className="h-4 w-4" />
-              보고 발송
-            </Link>
+        )}
+        <CardFooter className="flex flex-wrap gap-3 border-t border-secondary-200 pt-6">
+          {hasGps && (
+            <p className="flex flex-1 min-w-[200px] items-center gap-2 text-sm text-secondary-500">
+              <MapPin className="h-4 w-4 shrink-0" />
+              {locationText}
+              {accuracyText}
+            </p>
+          )}
+          <Button
+            size="lg"
+            className="gap-2"
+            disabled={reportSending || (!matchedAdvertiserId && isMultiSession)}
+            onClick={handleSendReport}
+          >
+            <Send className="h-4 w-4" />
+            {reportSending ? "발송 중..." : "보고 발송하기"}
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/reports">보고 목록</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
             <Link href="/capture">취소</Link>

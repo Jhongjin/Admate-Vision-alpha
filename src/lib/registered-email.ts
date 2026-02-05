@@ -22,6 +22,16 @@ function setCookie(name: string, value: string, maxAge: number): void {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`;
 }
 
+/** Session cookie: no max-age, removed when browser/tab closes */
+function setCookieSession(name: string, value: string): void {
+  if (typeof document === "undefined") return;
+  const secure =
+    typeof location !== "undefined" && location.protocol === "https:"
+      ? "; Secure"
+      : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; SameSite=Lax${secure}`;
+}
+
 function getFromStorage(): string | null {
   if (typeof localStorage === "undefined") return null;
   try {
@@ -60,10 +70,24 @@ export function getRegisteredEmail(): string | null {
   return null;
 }
 
-export function setRegisteredEmail(email: string): void {
+export type SetRegisteredEmailOptions = {
+  /** false = session only (로그인 상태 유지 해제 시). Default true */
+  keepLoggedIn?: boolean;
+};
+
+export function setRegisteredEmail(
+  email: string,
+  options?: SetRegisteredEmailOptions
+): void {
   const trimmed = email.trim();
-  setCookie(REGISTERED_EMAIL_COOKIE_NAME, trimmed, COOKIE_MAX_AGE_YEAR);
-  setStorage(trimmed);
+  const keepLoggedIn = options?.keepLoggedIn !== false;
+  if (keepLoggedIn) {
+    setCookie(REGISTERED_EMAIL_COOKIE_NAME, trimmed, COOKIE_MAX_AGE_YEAR);
+    setStorage(trimmed);
+  } else {
+    setCookieSession(REGISTERED_EMAIL_COOKIE_NAME, trimmed);
+    // Do not write to localStorage so next visit requires login
+  }
 }
 
 export function clearRegisteredEmail(): void {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AdvertiserForm } from "@/features/advertisers/components/advertiser-form";
@@ -14,6 +14,13 @@ export default function NewAdvertiserPage() {
   const router = useRouter();
   const createMutation = useCreateAdvertiser();
   const { toast } = useToast();
+  const errorMessage =
+    createMutation.isError && createMutation.error
+      ? extractApiErrorMessage(
+          createMutation.error,
+          "이미 등록된 광고주이거나 등록 중 오류가 발생했습니다."
+        )
+      : null;
 
   const handleSubmit = (values: AdvertiserCreate) => {
     createMutation.mutate(values, {
@@ -24,7 +31,7 @@ export default function NewAdvertiserPage() {
       onError: (err) => {
         toast({
           title: "등록 실패",
-          description: extractApiErrorMessage(err, "등록 중 오류가 발생했습니다."),
+          description: extractApiErrorMessage(err, "이미 등록된 광고주이거나 등록 중 오류가 발생했습니다."),
           variant: "destructive",
         });
       },
@@ -45,6 +52,15 @@ export default function NewAdvertiserPage() {
           광고주 정보를 입력한 뒤 저장하세요.
         </p>
       </header>
+
+      {errorMessage && (
+        <Card className="mb-6 border-red-200 bg-red-50/80">
+          <CardContent className="flex items-center gap-3 py-4">
+            <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+            <p className="text-sm font-medium text-red-800">{errorMessage}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-secondary-200">
         <CardHeader>

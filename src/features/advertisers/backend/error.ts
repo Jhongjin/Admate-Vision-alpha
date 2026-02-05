@@ -5,6 +5,7 @@ export const advertiserErrorCodes = {
   updateError: 'ADVERTISER_UPDATE_ERROR',
   deleteError: 'ADVERTISER_DELETE_ERROR',
   validationError: 'ADVERTISER_VALIDATION_ERROR',
+  nameAlreadyExists: 'ADVERTISER_NAME_ALREADY_EXISTS',
 } as const;
 
 type AdvertiserErrorValue =

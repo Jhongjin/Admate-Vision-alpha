@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn, UserPlus, CheckCircle2 } from "lucide-react";
@@ -10,9 +9,6 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { BRAND } from "@/constants/brand";
 import { getRegisteredEmail } from "@/lib/registered-email";
-
-const HERO_IMAGE =
-  "https://picsum.photos/seed/outdoor-billboard/800/480";
 
 const features = [
   { label: "옥외 광고 촬영", desc: "스마트폰으로 촬영 후 즉시 OCR" },
@@ -33,16 +29,17 @@ export default function Home() {
       <PublicHeader />
 
       <main className="flex-1">
-        {/* Hero: 옥외광고 이미지 */}
+        {/* Hero: 옥외광고 영상 */}
         <section className="relative w-full border-b border-slate-200">
           <div className="relative aspect-[5/3] w-full overflow-hidden bg-slate-200">
-            <Image
-              src={HERO_IMAGE}
-              alt="옥외 광고"
-              fill
-              className="object-cover"
-              sizes="(max-width: 420px) 100vw, 420px"
-              priority
+            <video
+              src="/hero.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 h-full w-full object-cover"
+              aria-label="옥외 광고"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-4 text-white">

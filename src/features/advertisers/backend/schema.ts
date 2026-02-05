@@ -1,14 +1,24 @@
 import { z } from 'zod';
 
-const emailSchema = z.string().min(1, '이메일을 입력해 주세요.').email('올바른 이메일 형식이 아닙니다.');
+const trimString = (s: string) => s.trim();
+const emailSchema = z
+  .string()
+  .transform(trimString)
+  .pipe(z.string().min(1, '이메일을 입력해 주세요.').email('올바른 이메일 형식이 아닙니다.'));
 
 export const AdvertiserCreateSchema = z.object({
-  name: z.string().min(1, '광고주명을 입력해 주세요.'),
+  name: z.string().transform(trimString).pipe(z.string().min(1, '광고주명을 입력해 주세요.')),
   email: emailSchema,
-  contactName: z.string().optional(),
-  campaignManagerName: z.string().min(1, '캠페인 담당자 이름을 입력해 주세요.'),
+  contactName: z
+    .string()
+    .optional()
+    .transform((s) => (s == null ? undefined : s.trim() || undefined)),
+  campaignManagerName: z.string().transform(trimString).pipe(z.string().min(1, '캠페인 담당자 이름을 입력해 주세요.')),
   campaignManagerEmail: emailSchema,
-  searchTerms: z.array(z.string()).default([]),
+  searchTerms: z
+    .array(z.string().transform(trimString).pipe(z.string()))
+    .default([])
+    .transform((arr) => arr.filter(Boolean)),
 });
 
 export const AdvertiserUpdateSchema = AdvertiserCreateSchema.partial();
@@ -46,3 +56,23 @@ export const AdvertiserResponseSchema = z.object({
 });
 
 export type AdvertiserResponse = z.infer<typeof AdvertiserResponseSchema>;
+
+const BULK_MAX = 100;
+
+export const AdvertiserBulkCreateSchema = z.object({
+  advertisers: z
+    .array(AdvertiserCreateSchema)
+    .min(1, '최소 1건의 광고주를 입력해 주세요.')
+    .max(BULK_MAX, `한 번에 최대 ${BULK_MAX}건까지 등록할 수 있습니다.`),
+  /** 중복 시 건너뛰기(skip) | 덮어쓰기(overwrite) */
+  onDuplicate: z.enum(['skip', 'overwrite']).default('skip'),
+});
+
+export type AdvertiserBulkCreate = z.infer<typeof AdvertiserBulkCreateSchema>;
+
+export type AdvertiserBulkResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: { rowIndex: number; message: string }[];
+};

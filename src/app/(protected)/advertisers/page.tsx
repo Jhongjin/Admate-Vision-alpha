@@ -1,20 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Pencil, Trash2, Users, Search, Upload, ChevronDown, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { useAdvertisers, useDeleteAdvertiser } from "@/features/advertisers/hooks/useAdvertisers";
 import { DeleteConfirmSheet } from "@/features/advertisers/components/delete-confirm-sheet";
 import type { Advertiser } from "@/features/advertisers/types";
 import { useToast } from "@/hooks/use-toast";
 
+function filterAdvertisers(list: Advertiser[], query: string): Advertiser[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter((adv) => {
+    const name = adv.name.toLowerCase();
+    const email = (adv.email ?? "").toLowerCase();
+    const terms = (adv.searchTerms ?? []).join(" ").toLowerCase();
+    return name.includes(q) || email.includes(q) || terms.includes(q);
+  });
+}
+
+const CSV_HEADER = "광고주명,이메일,광고주담당자,캠페인담당자이름,캠페인담당자이메일,검색어";
+
+function escapeCsvField(value: string): string {
+  if (!/[",\r\n]/.test(value)) return value;
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function downloadAdvertisersCsv(list: Advertiser[]) {
+  const rows = list.map((adv) => {
+    const name = escapeCsvField(adv.name);
+    const email = escapeCsvField(adv.email ?? "");
+    const contactName = escapeCsvField(adv.contactName ?? "");
+    const campaignManagerName = escapeCsvField(adv.campaignManagerName ?? "");
+    const campaignManagerEmail = escapeCsvField(adv.campaignManagerEmail ?? "");
+    const searchTerms = escapeCsvField((adv.searchTerms ?? []).join(", "));
+    return [name, email, contactName, campaignManagerName, campaignManagerEmail, searchTerms].join(",");
+  });
+  const content = [CSV_HEADER, ...rows].join("\n");
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "광고주_목록.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AdvertisersPage() {
   const { data: advertisers, isLoading, error } = useAdvertisers();
   const deleteMutation = useDeleteAdvertiser();
   const [deleteTarget, setDeleteTarget] = useState<Advertiser | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+
+  const filteredAdvertisers = useMemo(
+    () => (advertisers ? filterAdvertisers(advertisers, searchQuery) : []),
+    [advertisers, searchQuery]
+  );
 
   const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
@@ -42,13 +94,55 @@ export default function AdvertisersPage() {
             광고주 정보를 등록·수정·삭제할 수 있습니다.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/advertisers/new" className="gap-2">
-            <Plus className="h-4 w-4" />
-            광고주 등록
-          </Link>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2 min-h-[44px]">
+              <Plus className="h-4 w-4" />
+              광고주 등록
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[160px]">
+            <DropdownMenuItem asChild>
+              <Link href="/advertisers/new" className="flex items-center gap-2 cursor-pointer">
+                <Plus className="h-4 w-4" />
+                단일 등록
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/advertisers/bulk" className="flex items-center gap-2 cursor-pointer">
+                <Upload className="h-4 w-4" />
+                벌크 등록
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
+
+      {advertisers && advertisers.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              type="search"
+              placeholder="광고주명, 이메일, 검색어로 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 min-h-[44px]"
+              aria-label="광고주 검색"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 min-h-[44px]"
+            onClick={() => downloadAdvertisersCsv(filteredAdvertisers)}
+          >
+            <Download className="h-4 w-4" />
+            목록 다운로드 (CSV)
+          </Button>
+        </div>
+      )}
 
       {error && (
         <Card className="border-red-200 bg-red-50/50">
@@ -81,7 +175,14 @@ export default function AdvertisersPage() {
 
       {!isLoading && !error && advertisers && advertisers.length > 0 && (
         <ul className="space-y-3">
-          {advertisers.map((adv) => (
+          {filteredAdvertisers.length === 0 ? (
+            <Card className="border-slate-200">
+              <CardContent className="py-8 text-center text-slate-600">
+                검색 결과가 없습니다. 다른 검색어를 입력해 보세요.
+              </CardContent>
+            </Card>
+          ) : (
+          filteredAdvertisers.map((adv) => (
             <li key={adv.id}>
               <Card className="border-slate-200">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -113,7 +214,8 @@ export default function AdvertisersPage() {
                 </CardContent>
               </Card>
             </li>
-          ))}
+          ))
+          )}
         </ul>
       )}
 

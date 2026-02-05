@@ -33,6 +33,12 @@
    |------|--------|
    | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+   | `SUPABASE_URL` | Supabase 프로젝트 URL (동일) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key |
+   | `GOOGLE_CLOUD_VISION_API_KEY` | (선택) Google Cloud Vision API 키 |
+
+   **중요**: 각 변수 추가 시 **Environments**에서 **Production**을 반드시 체크하세요. (Preview만 체크하면 프로덕션 배포 시 변수가 주입되지 않습니다.)  
+   환경 변수 추가/수정 후에는 **새 배포**를 해야 반영됩니다. (기존 배포에는 적용되지 않음.)
 
 7. **Deploy** 클릭
 
@@ -52,3 +58,14 @@
 | 스마트폰 테스트 | 배포된 `https://...vercel.app` 주소로 접속 |
 
 추가로 Vercel 팀 초대, 커스텀 도메인 등이 필요하면 Vercel 대시보드에서 설정하면 됩니다.
+
+---
+
+## 4. 배포가 안 될 때 / 환경 변수가 적용 안 될 때
+
+- **빌드 로그에 "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY 없음"** 이 보이면, Vercel 빌드 시점에 환경 변수가 주입되지 않은 상태입니다.
+- **확인 사항**
+  1. **Settings → Environment Variables**에서 각 변수에 **Production** 체크가 되어 있는지 확인.
+  2. **Deployments** 탭에서 최신 배포 선택 → **⋯** → **Redeploy** → (가능하면 "Use existing Build Cache" 해제 후) 재배포.
+  3. **Git 푸시로 배포**하는 경우: **Settings → Git**에서 연결된 저장소·Production 브랜치가 맞는지 확인. `main` 등에 푸시 시 자동 배포가 트리거되는지 확인.
+- **CLI 배포** (`npx vercel --prod`)는 로컬 파일을 업로드해 배포합니다. 환경 변수는 Vercel 프로젝트에 설정된 값이 빌드/런타임에 사용됩니다. 변수 수정 후에는 다시 `npx vercel --prod`로 재배포하면 됩니다.

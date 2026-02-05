@@ -9,6 +9,7 @@ import {
   AdvertiserParamsSchema,
   AdvertiserCreateSchema,
   AdvertiserUpdateSchema,
+  AdvertiserBulkCreateSchema,
 } from '@/features/advertisers/backend/schema';
 import {
   listAdvertisers,
@@ -16,6 +17,7 @@ import {
   createAdvertiser,
   updateAdvertiser,
   deleteAdvertiser,
+  createAdvertisersBulk,
 } from '@/features/advertisers/backend/service';
 import {
   advertiserErrorCodes,
@@ -78,6 +80,34 @@ export const registerAdvertiserRoutes = (app: Hono<AppEnv>) => {
     if (!result.ok) {
       const err = result as ErrorResult<AdvertiserServiceError, unknown>;
       getLogger(c).error('Advertiser create failed', err.error.message);
+      return respond(c, result);
+    }
+    return respond(c, result);
+  });
+
+  app.post('/advertisers/bulk', async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = AdvertiserBulkCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return respond(
+        c,
+        failure(
+          400,
+          advertiserErrorCodes.validationError,
+          '벌크 입력값이 올바르지 않습니다.',
+          parsed.error.format()
+        )
+      );
+    }
+    const supabase = getSupabase(c);
+    const result = await createAdvertisersBulk(
+      supabase,
+      parsed.data.advertisers,
+      parsed.data.onDuplicate
+    );
+    if (!result.ok) {
+      const err = result as ErrorResult<AdvertiserServiceError, unknown>;
+      getLogger(c).error('Advertisers bulk create failed', err.error.message);
       return respond(c, result);
     }
     return respond(c, result);

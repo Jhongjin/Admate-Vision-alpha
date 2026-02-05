@@ -5,6 +5,7 @@ import type { Advertiser } from "@/features/advertisers/types";
 import type {
   AdvertiserCreate,
   AdvertiserUpdate,
+  AdvertiserBulkResult,
 } from "@/features/advertisers/backend/schema";
 
 const BASE = "/api/advertisers";
@@ -36,6 +37,17 @@ export async function updateAdvertiser(
 
 export async function deleteAdvertiser(id: string): Promise<void> {
   await apiClient.delete(`${BASE}/${id}`);
+}
+
+export async function createAdvertisersBulk(
+  advertisers: AdvertiserCreate[],
+  onDuplicate: 'skip' | 'overwrite' = 'skip'
+): Promise<AdvertiserBulkResult> {
+  const { data } = await apiClient.post<AdvertiserBulkResult>(`${BASE}/bulk`, {
+    advertisers,
+    onDuplicate,
+  });
+  return data;
 }
 
 export { extractApiErrorMessage };

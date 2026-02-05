@@ -4,7 +4,8 @@ import {
   respond,
   type ErrorResult,
 } from '@/backend/http/response';
-import { getLogger, getSupabase, type AppEnv } from '@/backend/hono/context';
+import { getLogger, getSupabase, getConfig, type AppEnv } from '@/backend/hono/context';
+import { isSupabasePlaceholder } from '@/backend/config';
 import {
   SignupBodySchema,
   LoginBodySchema,
@@ -15,6 +16,9 @@ import {
   authErrorCodes,
   type AuthServiceError,
 } from '@/features/auth/backend/error';
+
+const SERVICE_UNAVAILABLE_MESSAGE =
+  '로그인·회원가입을 사용하려면 Supabase 환경 변수(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)를 Vercel 프로젝트에 설정한 뒤 재배포해 주세요.';
 
 export const registerAuthRoutes = (app: Hono<AppEnv>) => {
   app.post('/auth/signup', async (c) => {
@@ -29,6 +33,12 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
           '이름과 이메일을 입력해 주세요.',
           parsed.error.format()
         )
+      );
+    }
+    if (isSupabasePlaceholder(getConfig(c))) {
+      return respond(
+        c,
+        failure(503, authErrorCodes.serviceUnavailable, SERVICE_UNAVAILABLE_MESSAGE)
       );
     }
     const supabase = getSupabase(c);
@@ -55,6 +65,12 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
         )
       );
     }
+    if (isSupabasePlaceholder(getConfig(c))) {
+      return respond(
+        c,
+        failure(503, authErrorCodes.serviceUnavailable, SERVICE_UNAVAILABLE_MESSAGE)
+      );
+    }
     const supabase = getSupabase(c);
     const result = await login(supabase, parsed.data);
     if (!result.ok) {
@@ -77,6 +93,12 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
           '이메일이 필요합니다.',
           parsed.error.format()
         )
+      );
+    }
+    if (isSupabasePlaceholder(getConfig(c))) {
+      return respond(
+        c,
+        failure(503, authErrorCodes.serviceUnavailable, SERVICE_UNAVAILABLE_MESSAGE)
       );
     }
     const supabase = getSupabase(c);

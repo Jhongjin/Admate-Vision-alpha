@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PublicHeader } from "@/components/layout/public-header";
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = useCallback(
@@ -27,7 +29,7 @@ export default function LoginPage() {
       setIsSubmitting(true);
       try {
         const user = await loginApi({ email: trimmed });
-        setRegisteredEmail(user.email);
+        setRegisteredEmail(user.email, { keepLoggedIn });
         toast({ title: "로그인 완료", description: `${user.name}님, 환영합니다.` });
         router.replace("/capture");
       } catch (err) {
@@ -40,7 +42,7 @@ export default function LoginPage() {
         setIsSubmitting(false);
       }
     },
-    [email, router, toast]
+    [email, keepLoggedIn, router, toast]
   );
 
   return (
@@ -76,6 +78,20 @@ export default function LoginPage() {
                   disabled={isSubmitting}
                   className="min-h-[48px] border-slate-200 bg-white text-base"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="keepLoggedIn"
+                  checked={keepLoggedIn}
+                  onCheckedChange={(v) => setKeepLoggedIn(v === true)}
+                  className="border-slate-300"
+                />
+                <Label
+                  htmlFor="keepLoggedIn"
+                  className="cursor-pointer text-sm font-normal text-slate-600"
+                >
+                  로그인 상태 유지
+                </Label>
               </div>
               <Button
                 type="submit"

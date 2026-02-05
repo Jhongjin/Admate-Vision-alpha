@@ -6,7 +6,13 @@
  */
 
 import { distance } from "fastest-levenshtein";
-import type { Advertiser } from "@/features/capture/data/dummy-advertisers";
+
+/** OCR 매칭에 필요한 최소 광고주 필드 (Supabase/API 응답과 호환) */
+export type AdvertiserForMatch = {
+  id: string;
+  name: string;
+  searchTerms?: string[];
+};
 
 export type MatchResult = {
   advertiserId: string;
@@ -95,7 +101,7 @@ function bestFuzzySimilarity(termNorm: string, ocrTokens: string[]): number {
  */
 export function matchOcrToAdvertiser(
   ocrText: string,
-  advertisers: Advertiser[]
+  advertisers: AdvertiserForMatch[]
 ): MatchResult | null {
   const ocrNorm = normalize(ocrText);
   const ocrNoSpaces = normalizeNoSpaces(ocrText);
@@ -104,7 +110,7 @@ export function matchOcrToAdvertiser(
   const ocrTokens = tokenize(ocrText);
 
   let best: {
-    advertiser: Advertiser;
+    advertiser: AdvertiserForMatch;
     exactScore: number;
     fuzzyScore: number;
     maxMatchedLen: number;
@@ -117,7 +123,8 @@ export function matchOcrToAdvertiser(
     let fuzzySum = 0;
     let maxFuzzySim = 0;
 
-    for (const term of advertiser.searchTerms) {
+    const terms = advertiser.searchTerms ?? [];
+    for (const term of terms) {
       const termNorm = normalize(term);
       const termNoSpaces = normalizeNoSpaces(term);
       if (!termNorm.length && !termNoSpaces.length) continue;
@@ -160,8 +167,9 @@ export function matchOcrToAdvertiser(
 
   if (!best) return null;
 
+  const terms = best.advertiser.searchTerms ?? [];
   const maxTermLen = Math.max(
-    ...best.advertiser.searchTerms.map((t) =>
+    ...terms.map((t) =>
       Math.max(normalize(t).length, normalizeNoSpaces(t).length)
     ),
     1
@@ -173,7 +181,7 @@ export function matchOcrToAdvertiser(
     const minConf = best.maxMatchedLen >= 2 ? 0.5 : 0;
     confidence = Math.min(1, Math.max(rawConfidence, minConf));
   } else {
-    const termCount = best.advertiser.searchTerms.length || 1;
+    const termCount = terms.length || 1;
     const avgFuzzy = best.fuzzyScore / termCount;
     confidence = Math.min(1, avgFuzzy * 1.2);
   }

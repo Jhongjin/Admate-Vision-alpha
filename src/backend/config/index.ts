@@ -6,12 +6,18 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 });
 
+export const PLACEHOLDER_SUPABASE_URL = "https://placeholder.supabase.co";
+
 const PLACEHOLDER_CONFIG: AppConfig = {
   supabase: {
-    url: "https://placeholder.supabase.co",
+    url: PLACEHOLDER_SUPABASE_URL,
     serviceRoleKey: "placeholder-service-role-key",
   },
 };
+
+export function isSupabasePlaceholder(config: AppConfig): boolean {
+  return config.supabase.url === PLACEHOLDER_SUPABASE_URL;
+}
 
 let cachedConfig: AppConfig | null = null;
 
