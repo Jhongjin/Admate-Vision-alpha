@@ -41,6 +41,8 @@ export type ReportEmailParams = {
   zipBase64?: string;
   /** ZIP 파일명 */
   zipFilename?: string;
+  /** PPT 보고서 첨부 (노출량 분석). 없으면 첨부 안 함 */
+  pptAttachment?: { filename: string; buffer: Buffer };
 };
 
 function safeFilenamePart(s: string): string {
@@ -87,6 +89,12 @@ export async function sendReportEmail(params: ReportEmailParams): Promise<{ ok: 
     attachments.push({
       filename: params.zipFilename,
       content: Buffer.from(params.zipBase64, "base64"),
+    });
+  }
+  if (params.pptAttachment) {
+    attachments.push({
+      filename: params.pptAttachment.filename,
+      content: params.pptAttachment.buffer,
     });
   }
 

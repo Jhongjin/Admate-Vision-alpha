@@ -82,6 +82,8 @@ export default function CaptureConfirmPage() {
   const [metaLoading, setMetaLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [reportSending, setReportSending] = useState(false);
+  const [includePpt, setIncludePpt] = useState(false);
+  const [displayDays, setDisplayDays] = useState(7);
   const router = useRouter();
   const { toast } = useToast();
   const { data: advertisersData } = useAdvertisers();
@@ -488,16 +490,25 @@ export default function CaptureConfirmPage() {
           senderNameOption,
           loginUserName: profile?.name ?? "",
           userEnteredName: userEnteredName.trim() || undefined,
+          locationLabel: addressLabel?.trim() || undefined,
           station: stationName ?? metaForFilename?.station ?? undefined,
           line: subwayLine ?? metaForFilename?.line ?? undefined,
+          imageCount: data?.adImages?.length ?? 0,
           dateStr: metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd"),
           zipBase64,
           zipFilename,
+          includePpt: includePpt || undefined,
+          displayDays: includePpt ? displayDays : undefined,
         }),
       });
-      let json: { ok?: boolean; message?: string; error?: string };
+      let json: { ok?: boolean; message?: string; error?: string; savedToHistory?: boolean };
       try {
-        json = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+        json = (await res.json()) as {
+          ok?: boolean;
+          message?: string;
+          error?: string;
+          savedToHistory?: boolean;
+        };
       } catch {
         toast({
           title: "발송 실패",
@@ -507,7 +518,11 @@ export default function CaptureConfirmPage() {
         return;
       }
       if (res.ok && json.ok) {
-        toast({ title: "보고 발송 완료", description: json.message });
+        const desc =
+          json.savedToHistory === false
+            ? "보고 메일은 발송되었으나 이력 저장에 실패했습니다. (DB 마이그레이션 또는 연결 확인)"
+            : json.message;
+        toast({ title: "보고 발송 완료", description: desc });
         router.push("/reports");
       } else {
         toast({
@@ -531,12 +546,15 @@ export default function CaptureConfirmPage() {
     stationName,
     subwayLine,
     advertiserLabel,
+    addressLabel,
     primaryRecipient,
     senderNameOption,
     userEnteredName,
     profile?.name,
     toast,
     router,
+    includePpt,
+    displayDays,
   ]);
 
   if (!data) {
@@ -886,6 +904,32 @@ export default function CaptureConfirmPage() {
                   <option value="campaign">캠페인 담당자 이름</option>
                 </select>
               </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-secondary-100">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="include-ppt"
+                  checked={includePpt}
+                  onCheckedChange={(v) => setIncludePpt(v === true)}
+                />
+                <Label htmlFor="include-ppt" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  PPT 노출량 보고서 포함 (역·호선 유동인구 기반)
+                </Label>
+              </div>
+              {includePpt && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="display-days" className="text-xs text-slate-600">게재 기간(일)</Label>
+                  <Input
+                    id="display-days"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={displayDays}
+                    onChange={(e) => setDisplayDays(Math.max(1, Math.min(365, Number(e.target.value) || 7)))}
+                    className="h-9 w-20"
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         )}

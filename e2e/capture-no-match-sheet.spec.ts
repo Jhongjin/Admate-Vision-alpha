@@ -49,7 +49,7 @@ test.describe("Capture – 매칭 실패 시트", () => {
       };
       Object.defineProperty(navigator, "mediaDevices", {
         value: {
-          getUserMedia: () => Promise.resolve(mockStream as MediaStream),
+          getUserMedia: () => Promise.resolve(mockStream as unknown as MediaStream),
           enumerateDevices: () => Promise.resolve([]),
         },
         configurable: true,

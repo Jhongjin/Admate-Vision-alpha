@@ -7,6 +7,7 @@ import { Camera, AlertCircle, MapPin, FileText, MapPinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   CAPTURE_SESSION_KEY,
+  SESSION_STORAGE_WARN_IMAGE_COUNT,
   type AdCaptureItem,
   type CaptureSessionData,
 } from "@/features/capture/constants";
@@ -21,7 +22,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { extractTextFromImage } from "@/features/capture/lib/ocr";
+import { compressDataUrl } from "@/features/capture/lib/compress-dataurl";
 import { useToast } from "@/hooks/use-toast";
+
+class OcrRateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OcrRateLimitError";
+  }
+}
 
 function runOcr(imageDataUrl: string): Promise<string> {
   return fetch("/api/capture/ocr", {
@@ -29,12 +38,21 @@ function runOcr(imageDataUrl: string): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ imageDataUrl }),
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.ok) return res.json() as Promise<{ text: string }>;
-      return Promise.reject(new Error("OCR unavailable"));
+      if (res.status === 429) {
+        const body = await res.json().catch(() => ({}));
+        throw new OcrRateLimitError(
+          (body as { message?: string }).message ?? "OCR 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+        );
+      }
+      throw new Error("OCR unavailable");
     })
     .then((body) => body.text)
-    .catch(() => extractTextFromImage(imageDataUrl).then((ocr) => ocr.text));
+    .catch((err) => {
+      if (err instanceof OcrRateLimitError) throw err;
+      return extractTextFromImage(imageDataUrl).then((ocr) => ocr.text);
+    });
 }
 
 const GPS_MAX_AGE_MS = 30_000;
@@ -53,7 +71,11 @@ export default function CapturePage() {
     accuracy?: number;
     timestamp: number;
   } | null>(null);
-  const { data: advertisersList } = useAdvertisers();
+  const {
+    data: advertisersList,
+    isLoading: advertisersLoading,
+    isError: advertisersError,
+  } = useAdvertisers();
   /** 광고주 매칭은 Supabase(API) 목록만 사용 */
   const advertisers = (advertisersList ?? []) as Parameters<typeof matchOcrToAdvertiser>[1];
   const { toast } = useToast();
@@ -195,7 +217,8 @@ export default function CapturePage() {
       return;
     }
     ctx.drawImage(video, 0, 0);
-    const imageDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const rawDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const imageDataUrl = await compressDataUrl(rawDataUrl);
 
     if (!isAdMode) {
       addCapturedImage(imageDataUrl);
@@ -213,7 +236,15 @@ export default function CapturePage() {
         setPendingNoMatchImage(imageDataUrl);
         setShowNoAdvertiserSheet(true);
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof OcrRateLimitError) {
+        toast({
+          title: "OCR 제한",
+          description: e.message,
+          variant: "destructive",
+        });
+        return;
+      }
       setPendingNoMatchImage(imageDataUrl);
       setShowNoAdvertiserSheet(true);
     } finally {
@@ -242,6 +273,13 @@ export default function CapturePage() {
       lng: isCachedFresh ? cached!.lng : undefined,
       accuracy: isCachedFresh ? cached!.accuracy : undefined,
     };
+    const totalImages = adImages.length + (locationImage ? 1 : 0);
+    if (totalImages >= SESSION_STORAGE_WARN_IMAGE_COUNT) {
+      toast({
+        title: "저장 용량 참고",
+        description: "사진이 많아 저장 용량이 클 수 있습니다. 확인 페이지에서 바로 ZIP 다운로드해 주세요.",
+      });
+    }
     try {
       sessionStorage.setItem(CAPTURE_SESSION_KEY, JSON.stringify(data));
     } catch (e) {
@@ -267,6 +305,14 @@ export default function CapturePage() {
         {status === "ready" && (locationImage != null || skipLocation) && (
           <p className="mt-2 text-xs text-primary-600 font-medium">
             {skipLocation ? "위치 없음 · " : "위치 1장 · "}광고 {adImages.length}장
+          </p>
+        )}
+        {advertisersLoading && (
+          <p className="mt-1 text-xs text-secondary-500">광고주 목록 불러오는 중…</p>
+        )}
+        {advertisersError && !advertisersLoading && (
+          <p className="mt-1 text-xs text-amber-700">
+            광고주 목록을 불러오지 못했습니다. 매칭이 제한될 수 있습니다.
           </p>
         )}
         {status === "ready" && (
@@ -364,7 +410,7 @@ export default function CapturePage() {
                   >
                     <Camera className="h-5 w-5" />
                     {isCapturing
-                      ? "촬영 중..."
+                      ? (isAdMode ? "OCR 인식 중..." : "촬영 중...")
                       : `광고 촬영 (${adImages.length}/${AD_MAX})`}
                   </Button>
                   {canFinish && (

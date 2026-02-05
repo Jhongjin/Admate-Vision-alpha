@@ -1,6 +1,9 @@
 /** sessionStorage 키: 촬영 직후 확인 페이지로 전달하는 데이터 */
 export const CAPTURE_SESSION_KEY = "admate_capture_data";
 
+/** 이 장수 이상이면 저장 용량 주의 안내 (sessionStorage ~5MB 한계 고려) */
+export const SESSION_STORAGE_WARN_IMAGE_COUNT = 8;
+
 /** 광고 사진 1장 (위치 촬영 후 추가 촬영) */
 export type AdCaptureItem = {
   imageDataUrl: string;

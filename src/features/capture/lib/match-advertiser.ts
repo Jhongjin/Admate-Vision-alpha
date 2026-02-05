@@ -29,6 +29,9 @@ const EXACT_WEIGHT = 10;
 /** Fuzzy 유사도에 쓸 검색어 최소 길이 (짧은 단어는 OCR 노이즈에 잘못 매칭됨 → LG 등 오인식 방지) */
 const MIN_FUZZY_TERM_LENGTH = 4;
 
+/** 긴 검색어(전체 이름 등)는 OCR 전체 문장과도 유사도 비교 (예: 서울특별시교육청보건안전진흥 vs 진흥원) */
+const LONG_TERM_LENGTH = 10;
+
 /**
  * 정규화: 공백·줄바꿈 축소, 소문자화.
  */
@@ -79,14 +82,26 @@ function tokenize(ocrText: string): string[] {
 
 /**
  * 한 검색어와 OCR 토큰들 중 최대 유사도.
+ * 긴 검색어(광고주 전체 이름 등)는 OCR 전체 문자열과도 비교해, 일부만 다를 때(예: 진흥 vs 진흥원) 매칭되도록 함.
  */
-function bestFuzzySimilarity(termNorm: string, ocrTokens: string[]): number {
+function bestFuzzySimilarity(
+  termNorm: string,
+  ocrTokens: string[],
+  ocrNorm: string,
+  ocrNoSpaces: string
+): number {
   if (!termNorm.length) return 0;
   let best = 0;
   for (const token of ocrTokens) {
     if (!token.length) continue;
     const sim = similarity(termNorm, token);
     if (sim > best) best = sim;
+  }
+  if (termNorm.length >= LONG_TERM_LENGTH) {
+    const fullSimNorm = similarity(termNorm, ocrNorm);
+    const fullSimNoSpaces = similarity(termNorm, ocrNoSpaces);
+    if (fullSimNorm > best) best = fullSimNorm;
+    if (fullSimNoSpaces > best) best = fullSimNoSpaces;
   }
   return best;
 }
@@ -123,7 +138,16 @@ export function matchOcrToAdvertiser(
     let fuzzySum = 0;
     let maxFuzzySim = 0;
 
-    const terms = advertiser.searchTerms ?? [];
+    const rawTerms = advertiser.searchTerms ?? [];
+    const nameNorm = normalize(advertiser.name);
+    const terms = Array.from(
+      new Set([
+        ...rawTerms,
+        ...(nameNorm && !rawTerms.some((t) => normalize(t) === nameNorm)
+          ? [advertiser.name]
+          : []),
+      ])
+    ).filter(Boolean);
     for (const term of terms) {
       const termNorm = normalize(term);
       const termNoSpaces = normalizeNoSpaces(term);
@@ -138,7 +162,7 @@ export function matchOcrToAdvertiser(
       const termLen = termNorm.length || termNoSpaces.length;
       const fuzzySim =
         termLen >= MIN_FUZZY_TERM_LENGTH
-          ? bestFuzzySimilarity(termNorm, ocrTokens)
+          ? bestFuzzySimilarity(termNorm, ocrTokens, ocrNorm, ocrNoSpaces)
           : 0;
       fuzzySum += fuzzySim;
       if (fuzzySim > maxFuzzySim) maxFuzzySim = fuzzySim;
@@ -167,7 +191,14 @@ export function matchOcrToAdvertiser(
 
   if (!best) return null;
 
-  const terms = best.advertiser.searchTerms ?? [];
+  const rawBestTerms = best.advertiser.searchTerms ?? [];
+  const bestNameNorm = normalize(best.advertiser.name);
+  const terms = [
+    ...rawBestTerms,
+    ...(bestNameNorm && !rawBestTerms.some((t) => normalize(t) === bestNameNorm)
+      ? [best.advertiser.name]
+      : []),
+  ].filter(Boolean);
   const maxTermLen = Math.max(
     ...terms.map((t) =>
       Math.max(normalize(t).length, normalizeNoSpaces(t).length)

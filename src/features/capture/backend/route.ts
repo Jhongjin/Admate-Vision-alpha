@@ -4,6 +4,9 @@ import { getSupabase, type AppEnv } from "@/backend/hono/context";
 import { getAdvertiserById } from "@/features/advertisers/backend/service";
 import { runGoogleVisionOcr } from "./ocr-service";
 import { sendReportEmail } from "./report-email";
+import { fetchStationFlow } from "./report-exposure/public-data-service";
+import { calculateExposure } from "./report-exposure/exposure-calc";
+import { generateReportPpt } from "./report-exposure/ppt-generator";
 
 /** OCR API rate limit: 분당 최대 요청 수 (IP당) */
 const OCR_RATE_LIMIT_PER_MIN = 30;
@@ -49,6 +52,10 @@ const ReportBodySchema = z.object({
   dateStr: z.string().optional(),
   zipBase64: z.string().optional(),
   zipFilename: z.string().optional(),
+  /** PPT 노출량 보고서 포함 여부 */
+  includePpt: z.boolean().optional(),
+  /** 게재 기간(일수). includePpt 시 노출량 계산에 사용. 기본 7 */
+  displayDays: z.number().int().min(1).max(365).optional(),
 }).passthrough();
 
 export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
@@ -117,6 +124,37 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
 
     const dateStr = payload.dateStr ?? new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
+    let pptAttachment: { filename: string; buffer: Buffer } | undefined;
+    if (payload.includePpt && payload.station && payload.line) {
+      const flowResult = await fetchStationFlow(payload.station, payload.line);
+      if (flowResult.ok) {
+        const displayDays = payload.displayDays ?? 7;
+        const exposure = calculateExposure({
+          flowData: flowResult.data,
+          displayDays,
+        });
+        try {
+          const pptBuffer = await generateReportPpt({
+            advertiserName: payload.advertiserName ?? adv.name,
+            station: payload.station,
+            line: payload.line,
+            displayDays,
+            exposure,
+            subtitle: payload.userEnteredName ?? undefined,
+            dateStr,
+          });
+          const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
+          const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
+          pptAttachment = {
+            filename: `노출량보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pptx`,
+            buffer: pptBuffer,
+          };
+        } catch (pptErr) {
+          console.error("[capture/report] PPT 생성 실패:", pptErr);
+        }
+      }
+    }
+
     const result = await sendReportEmail({
       primaryRecipient: payload.primaryRecipient as "advertiser" | "campaign",
       senderNameOption: payload.senderNameOption as "user" | "campaign",
@@ -131,6 +169,7 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       dateStr,
       zipBase64: payload.zipBase64,
       zipFilename: payload.zipFilename,
+      pptAttachment,
     });
 
     if (!result.ok) {
@@ -153,13 +192,14 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       sent_to_email: sentToEmail ?? null,
     });
     if (insertErr) {
-      // 로그만 하고 클라이언트에는 성공 반환 (메일은 이미 발송됨)
       console.error("[capture/report] vision_ocr_reports insert failed:", insertErr);
     }
 
     return c.json({
       ok: true,
       message: "보고 메일이 발송되었습니다.",
+      savedToHistory: !insertErr,
+      ...(insertErr && { savedToHistoryError: insertErr.message }),
     });
   });
 
