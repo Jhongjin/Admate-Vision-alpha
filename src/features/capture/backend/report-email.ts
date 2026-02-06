@@ -99,6 +99,8 @@ ${senderName} 드림`;
 
 const MEDIA_ARCHIVE_URL = "https://www.nasmedia.co.kr/%EB%82%98%EC%8A%A4%EB%A6%AC%ED%8F%AC%ED%8A%B8/%EB%AF%B8%EB%94%94%EC%96%B4-%EC%95%84%EC%B9%B4%EC%9D%B4%EB%B8%8C/";
 const TREND_ARCHIVE_URL = "https://www.nasmedia.co.kr/%EB%82%98%EC%8A%A4%EB%A6%AC%ED%8F%AC%ED%8A%B8/%EC%A0%95%EA%B8%B0%EB%B3%B4%EA%B3%A0%EC%84%9C/";
+const KT_NASMEDIA_LOGO_URL = "https://studio.nasmedia.co.kr/mail/images/kt-nasmedia_CI.png";
+const KT_NASMEDIA_LINK = "https://www.nasmedia.co.kr/";
 
 function escapeHtml(s: string): string {
   return s
@@ -119,33 +121,38 @@ export function buildReportHtml(params: ReportEmailParams): string {
     ? `${escapeHtml(campaignManagerName)} <span style="font-size:14px;font-weight:normal;color:#333;">${escapeHtml(campaignManagerNameEn)}</span>`
     : escapeHtml(campaignManagerName);
 
-  const footerWidth = "65%";
+  const logoImg = `<img src="${KT_NASMEDIA_LOGO_URL}" alt="kt nasmedia" width="120" height="28" style="display:block;max-height:28px;width:auto;" />`;
+  const logoLink = `<a href="${KT_NASMEDIA_LINK}" target="_blank" rel="noopener" style="text-decoration:none;">${logoImg}</a>`;
+
+  const footerWidth = "52%";
+  const footerMaxWidth = "360px";
   const footerHtml = `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;margin-bottom:0;">
   <tr>
-    <td style="width:${footerWidth};max-width:480px;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #e5e7eb;">
+    <td style="width:${footerWidth};max-width:${footerMaxWidth};">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #1a1a1a;">
         <tr>
-          <td style="padding:16px 0 0 0;font-size:16px;font-weight:bold;color:#111;">${nameDisplay}</td>
+          <td style="padding:12px 0 0 0;font-size:15px;font-weight:bold;color:#111;vertical-align:top;">${nameDisplay}</td>
+          <td align="right" style="padding:12px 0 0 0;vertical-align:top;">${logoLink}</td>
         </tr>
         <tr>
-          <td style="padding:16px 0 0 0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;border-radius:6px;padding:16px 20px;">
+          <td colspan="2" style="padding:10px 0 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;border-radius:6px;padding:10px 12px;">
               <tr>
-                <td style="font-size:13px;font-weight:bold;color:#374151;">Media Archive</td>
-                <td style="font-size:12px;color:#6b7280;padding:0 8px;">온모바일 | IPTV | OOH | 모바일광고플랫폼</td>
-                <td align="right" style="white-space:nowrap;">
-                  <a href="${MEDIA_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+                <td style="font-size:12px;font-weight:bold;color:#374151;padding:0 6px 0 0;white-space:nowrap;">Media Archive</td>
+                <td style="font-size:11px;color:#6b7280;padding:0 4px;">온모바일 | IPTV | OOH | 모바일광고플랫폼</td>
+                <td align="right" style="white-space:nowrap;padding-left:4px;">
+                  <a href="${MEDIA_ARCHIVE_URL}" style="display:inline-block;padding:6px 12px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:11px;font-weight:500;border-radius:4px;">바로가기</a>
                 </td>
               </tr>
               <tr>
-                <td colspan="3" style="height:12px;"></td>
+                <td colspan="3" style="height:8px;"></td>
               </tr>
               <tr>
-                <td style="font-size:13px;font-weight:bold;color:#374151;">Trend Archive</td>
-                <td style="font-size:12px;color:#6b7280;padding:0 8px;">마케터라면 알아야 할 디지털 트렌드와 이슈</td>
-                <td align="right" style="white-space:nowrap;">
-                  <a href="${TREND_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+                <td style="font-size:12px;font-weight:bold;color:#374151;padding:0 6px 0 0;white-space:nowrap;">Trend Archive</td>
+                <td style="font-size:11px;color:#6b7280;padding:0 4px;">마케터라면 알아야 할 디지털 트렌드와 이슈</td>
+                <td align="right" style="white-space:nowrap;padding-left:4px;">
+                  <a href="${TREND_ARCHIVE_URL}" style="display:inline-block;padding:6px 12px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:11px;font-weight:500;border-radius:4px;">바로가기</a>
                 </td>
               </tr>
             </table>
