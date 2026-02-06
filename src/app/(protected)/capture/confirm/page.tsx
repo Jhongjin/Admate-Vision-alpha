@@ -415,7 +415,7 @@ export default function CaptureConfirmPage() {
       ? `https://www.google.com/maps?q=${data.lat},${data.lng}`
       : null;
 
-  const isMultiSession = data != null && isLocationAdSession(data);
+  const isMultiSession = data != null && (isLocationAdSession(data) || (Array.isArray(data.adImages) && data.adImages.length > 0));
   const hasResolvedStation =
     !!stationName &&
     stationName !== FALLBACK.station &&
