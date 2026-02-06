@@ -1,65 +1,94 @@
 import { ImageResponse } from "next/og";
 
+// Route segment config
 export const runtime = "edge";
 
-export const size = { width: 32, height: 32 };
+// Image metadata
+export const size = {
+  width: 32,
+  height: 32,
+};
 export const contentType = "image/png";
 
+// Image generation
 export default function Icon() {
   return new ImageResponse(
     (
+      // ImageResponse JSX element
       <div
         style={{
           width: "100%",
           height: "100%",
-          background: "#ffffff",
-          borderRadius: 8,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          backgroundColor: "white",
+          borderRadius: "6px", // Rounded square
         }}
       >
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 32 32"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
+        {/* Logo Container */}
+        <div
+          style={{
+            width: "24px",
+            height: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+          }}
         >
-          <defs>
-            <linearGradient
-              id="avGrad"
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="0%"
-            >
-              <stop offset="0%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#7c3aed" />
-            </linearGradient>
-          </defs>
-          {/* Lens circle (aperture) */}
-          <circle cx="16" cy="16" r="11" fill="url(#avGrad)" />
-          <circle cx="16" cy="16" r="4" fill="#ffffff" />
-          {/* AV letters */}
-          <text
-            x="16"
-            y="18"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="url(#avGrad)"
-            style={{
-              fontFamily: "system-ui, sans-serif",
-              fontWeight: 800,
-              fontSize: 10,
-              letterSpacing: -0.8,
-            }}
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            AV
-          </text>
-        </svg>
+            <defs>
+              <linearGradient id="logo-gradient" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#4f46e5" /> {/* Indigo */}
+                <stop offset="1" stopColor="#06b6d4" /> {/* Cyan */}
+              </linearGradient>
+            </defs>
+
+            {/* Shutter / Lens Aperture Circles */}
+            <path
+              d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+              stroke="url(#logo-gradient)"
+              strokeWidth="2"
+              opacity="0.2"
+            />
+            <path
+              d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z"
+              stroke="url(#logo-gradient)"
+              strokeWidth="2"
+            />
+
+            {/* Central Eye / Lens */}
+            <circle cx="12" cy="12" r="2.5" fill="url(#logo-gradient)" />
+
+            {/* Stylized 'A' / Vision Cut */}
+            {/* An abstract shape cutting through resembling A/V */}
+            <path
+              d="M4 19L9.5 5L15 19"
+              stroke="url(#logo-gradient)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M7 13H12"
+              stroke="url(#logo-gradient)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
       </div>
     ),
-    { ...size }
+    // ImageResponse options
+    {
+      ...size,
+    }
   );
 }
