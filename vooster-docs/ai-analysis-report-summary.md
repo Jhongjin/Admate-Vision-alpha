@@ -85,6 +85,6 @@
 
 ## 👨‍💻 차기 작업자(Cursor)를 위한 가이드
 
-- **AI Service**: `ai-analysis-service.ts`는 Mock. 실제 운영 시 Gemini API 호출로 교체.
+- **AI Service**: `ai-analysis-service.ts`는 Mock. 실제 운영 시 Gemini API 호출로 교체. → **상세 절차는 [gemini-ai-analysis-integration-guide.md](./gemini-ai-analysis-integration-guide.md) 참고.**
 - **Visual Proof**: `route.ts` 이메일 발송 로직과 저장 로직 사이에, 실제 업로드된 이미지 URL을 DB에 저장하는 파이프라인 추가 필요. (현재 Mock 이미지 사용)
 - **OCR Upgrade**: `ocr-service.ts`를 Gemini Vision 기반으로 업그레이드하면 인식률 개선 가능.

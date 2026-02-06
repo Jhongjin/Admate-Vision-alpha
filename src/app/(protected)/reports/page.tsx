@@ -145,12 +145,14 @@ export default function ReportsPage() {
                         {report.advertiser_id ? "전송 완료" : "미확인"}
                       </Badge>
                       <div className="flex gap-2">
-                        <Button asChild size="sm" variant="outline" className="h-7 text-xs border-indigo-100 bg-indigo-50/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700">
-                          <Link href={`/reports/analysis/${report.id}`}>
-                            <FileText className="mr-1 h-3 w-3" />
-                            AI 분석
-                          </Link>
-                        </Button>
+                        {report.station != null && report.station.trim() !== "" && (
+                          <Button asChild size="sm" variant="outline" className="h-7 text-xs border-indigo-100 bg-indigo-50/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700">
+                            <Link href={`/reports/analysis/${report.id}`}>
+                              <FileText className="mr-1 h-3 w-3" />
+                              AI 분석
+                            </Link>
+                          </Button>
+                        )}
                         <Button asChild size="sm" variant="ghost" className="h-7 w-7 p-0">
                           <Link href={`/capture/confirm?sessionId=${report.id}`}>
                             <MapPin className="h-3.5 w-3.5 text-slate-400" />

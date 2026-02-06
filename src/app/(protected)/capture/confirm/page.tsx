@@ -1055,7 +1055,7 @@ export default function CaptureConfirmPage() {
           <Button
             size="lg"
             className="gap-2"
-            disabled={reportSending || (!matchedAdvertiserId && isMultiSession)}
+            disabled={reportSending}
             onClick={handleSendReport}
           >
             <Send className="h-4 w-4" />

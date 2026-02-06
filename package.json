@@ -17,9 +17,11 @@
     "test:e2e:headed": "playwright test --headed",
     "test:all": "run-p test test:e2e",
     "typecheck": "tsc --noEmit",
-    "env:check": "dotenv -e .env.local -- tsx scripts/check-env.ts"
+    "env:check": "dotenv -e .env.local -- tsx scripts/check-env.ts",
+    "test:ai-analysis": "dotenv -e .env.local -- tsx scripts/test-ai-analysis.ts"
   },
   "dependencies": {
+    "@google/genai": "^1.40.0",
     "@hookform/resolvers": "^4",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.15",

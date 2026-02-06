@@ -241,6 +241,38 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
     });
   });
 
+  /** AI 성과 분석 웹 미리보기용 (로컬/형태 확인) — Gemini 호출 후 리포트와 동일한 형태로 반환 */
+  app.get("/capture/ai-analysis-preview", async (c) => {
+    const sample = {
+      station: "강남",
+      line: "2호선",
+      advertiserName: "테스트 광고주",
+      dateStr: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+    };
+    try {
+      const ai_analysis = await generateAiAnalysis(sample);
+      const now = new Date().toISOString();
+      return c.json({
+        id: "preview",
+        advertiser_name: sample.advertiserName,
+        station: sample.station,
+        line: sample.line,
+        location_label: null,
+        ai_analysis,
+        created_at: now,
+        sent_at: now,
+        vision_ocr_advertisers: {
+          campaign_manager_name: "캠페인 담당자 (샘플)",
+          campaign_manager_email: "campaign@example.com",
+          contact_name: null,
+        },
+      });
+    } catch (e) {
+      console.error("[capture/ai-analysis-preview]", e);
+      return c.json({ error: "PREVIEW_FAILED", message: "미리보기 생성 실패" }, 500);
+    }
+  });
+
   /** 보고 발송 이력 목록 (최신순) */
   app.get("/reports", async (c) => {
     const supabase = getSupabase(c);
