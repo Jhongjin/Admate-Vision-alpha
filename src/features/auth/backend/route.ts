@@ -49,6 +49,7 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
       getLogger(c).error('Auth signup failed', err.error.message);
       return respond(c, result);
     }
+    getLogger(c).info('Auth signup success; verification email sent to', parsed.data.email);
     return respond(c, result);
   });
 

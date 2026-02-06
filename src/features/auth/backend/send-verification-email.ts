@@ -10,10 +10,11 @@ const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "나스미디어 보고 <onboarding@resend.dev>";
 
 function getBaseUrl(): string {
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel}`;
+  // 커스텀 도메인(예: vision-ooh.admate.ai.kr) 사용 시 NEXT_PUBLIC_APP_URL 설정 권장
   const app = process.env.NEXT_PUBLIC_APP_URL;
   if (app) return app.replace(/\/$/, "");
+  const vercel = process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel}`;
   return "http://localhost:3000";
 }
 
