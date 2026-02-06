@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText, MapPin } from "lucide-react";
+import { FileText, MapPin, Search, ChevronRight, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
 type ReportRow = {
   id: string;
@@ -22,14 +24,7 @@ type ReportRow = {
 
 function formatSentAt(iso: string): string {
   try {
-    const d = new Date(iso);
-    return d.toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return format(new Date(iso), "yyyy. MM. dd a h:mm", { locale: ko });
   } catch {
     return iso;
   }
@@ -39,8 +34,7 @@ function buildLocationLabel(row: ReportRow): string {
   const parts: string[] = [];
   if (row.line) parts.push(row.line);
   if (row.station) parts.push(row.station);
-  if (row.location_label) parts.push(row.location_label);
-  return parts.length ? parts.join(" · ") : "—";
+  return parts.length ? parts.join(" · ") : row.location_label || "위치 미정";
 }
 
 export default function ReportsPage() {
@@ -89,37 +83,17 @@ export default function ReportsPage() {
       </header>
 
       {loading && (
-        <ul className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <li key={i}>
-              <Card className="border-slate-100 bg-white shadow-sm">
-                <CardHeader className="pb-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-4 shrink-0 rounded-full" />
-                    <Skeleton className="h-4 w-48" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-4 shrink-0 rounded-full" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-50">
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
       )}
+
       {error && (
         <p className="text-red-600">{error}</p>
       )}
+
       {!loading && !error && reports.length === 0 && (
         <Card className="border-slate-100 bg-white shadow-sm">
           <CardContent className="py-12 text-center text-slate-500">
@@ -130,57 +104,68 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       )}
+
       {!loading && !error && reports.length > 0 && (
-        <ul className="space-y-4">
-          {reports.map((report) => (
-            <li key={report.id}>
-              <Card className="border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-100">
-                <CardHeader className="pb-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold text-slate-900 text-lg">
-                      {report.advertiser_name}
-                    </span>
-                    <div className="pt-2 mt-2 border-t border-slate-50 flex items-center justify-between">
-                      <Badge variant={report.advertiser_id ? "default" : "secondary"} className={report.advertiser_id ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" : "bg-slate-100 text-slate-500"}>
-                        {report.advertiser_id ? "전송 완료" : "미확인"}
-                      </Badge>
-                      <div className="flex gap-2">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4">광고주</th>
+                  <th className="px-6 py-4">위치 / 노선</th>
+                  <th className="px-6 py-4">발송 상태</th>
+                  <th className="px-6 py-4">발송 시각</th>
+                  <th className="px-6 py-4 text-right">관리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {reports.map((report) => (
+                  <tr key={report.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-slate-900">{report.advertiser_name}</div>
+                      <div className="text-xs text-slate-500 mt-1">이미지 {report.image_count ?? 0}장</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-slate-700">
+                        <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                        {buildLocationLabel(report)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {report.sent_to_email ? (
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 shadow-none font-normal">
+                          발송 완료
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">미발송</Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                      {formatSentAt(report.sent_at)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         {report.station != null && report.station.trim() !== "" && report.station !== "미인식" && (
-                          <Button asChild size="sm" variant="outline" className="h-7 text-xs border-indigo-100 bg-indigo-50/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700">
+                          <Button asChild size="sm" variant="outline" className="h-8 text-xs border-indigo-100 bg-indigo-50/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700">
                             <Link href={`/reports/analysis/${report.id}`}>
-                              <FileText className="mr-1 h-3 w-3" />
+                              <FileText className="mr-1 h-3.5 w-3.5" />
                               AI 분석
                             </Link>
                           </Button>
                         )}
-                        <Button asChild size="sm" variant="ghost" className="h-7 w-7 p-0">
+                        <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-400 hover:text-slate-900" title="상세 정보 및 수정">
                           <Link href={`/capture/confirm?sessionId=${report.id}`}>
-                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                            <FileSearch className="h-4 w-4" />
                           </Link>
                         </Button>
                       </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-1.5 text-sm text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
-                    <span className="text-slate-600 font-medium">{buildLocationLabel(report)}</span>
-                  </div>
-                  {report.image_count != null && (
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-slate-400" />
-                      <span>이미지 {report.image_count}장</span>
-                    </div>
-                  )}
-                  <p className="text-xs pt-2 text-slate-400 border-t border-slate-50 mt-3">
-                    발송 시각: {formatSentAt(report.sent_at)}
-                  </p>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
