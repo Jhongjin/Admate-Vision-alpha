@@ -32,7 +32,7 @@ export function ProtectedHeader() {
     <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 safe-area-padding-x">
       <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
-          href="/capture"
+          href="/dashboard"
           className="flex min-h-[44px] min-w-[44px] shrink-0 items-center text-base font-semibold tracking-tight text-slate-900 group"
         >
           {BRAND.name} <span className="text-indigo-600 ml-1 group-hover:text-indigo-500 transition-colors">Vision</span>
