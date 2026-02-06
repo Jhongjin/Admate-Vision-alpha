@@ -43,6 +43,8 @@ export type ReportEmailParams = {
   zipFilename?: string;
   /** PPT 보고서 첨부 (노출량 분석). 없으면 첨부 안 함 */
   pptAttachment?: { filename: string; buffer: Buffer };
+  /** AI 분석 리포트 URL */
+  reportUrl?: string;
 };
 
 function safeFilenamePart(s: string): string {
@@ -59,12 +61,17 @@ export function buildReportSubject(params: ReportEmailParams): string {
 }
 
 export function buildReportBody(params: ReportEmailParams): string {
-  const { senderNameOption, loginUserName, campaignManagerName, campaignManagerEmail } = params;
+  const { senderNameOption, loginUserName, campaignManagerName, campaignManagerEmail, reportUrl } = params;
   const senderName =
     senderNameOption === "user" ? loginUserName || "나스미디어" : campaignManagerName;
-  const body = `안녕하세요. 나스미디어 ${senderName} 입니다. 게첨 보고서 전달 드립니다.
+  let body = `안녕하세요. 나스미디어 ${senderName} 입니다. 게첨 보고서 전달 드립니다.
 
 해당 메일은 발신전용으로 관련사항에 대한 문의는 ${campaignManagerName} (${campaignManagerEmail}) 로 회신 부탁 드립니다.`;
+
+  if (reportUrl) {
+    body += `\n\n[AI 성과 분석 리포트 확인하기]\n${reportUrl}`;
+  }
+
   return body;
 }
 

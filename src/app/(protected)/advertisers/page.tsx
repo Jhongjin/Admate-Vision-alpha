@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Users, Search, Upload, ChevronDown, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,7 +80,6 @@ export default function AdvertisersPage() {
         toast({
           title: "삭제 실패",
           description: err instanceof Error ? err.message : "삭제 중 오류가 발생했습니다.",
-          variant: "destructive",
         });
       },
     });
@@ -128,14 +128,14 @@ export default function AdvertisersPage() {
               placeholder="광고주명, 이메일, 검색어로 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 min-h-[44px]"
+              className="pl-9 h-11 border-slate-200 bg-white focus-visible:ring-indigo-500"
               aria-label="광고주 검색"
             />
           </div>
           <Button
             type="button"
             variant="outline"
-            className="gap-2 min-h-[44px]"
+            className="gap-2 h-11 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             onClick={() => downloadAdvertisersCsv(filteredAdvertisers)}
           >
             <Download className="h-4 w-4" />
@@ -147,7 +147,7 @@ export default function AdvertisersPage() {
       {error && (
         <Card className="border-red-200 bg-red-50/50">
           <CardContent className="pt-6">
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-red-600">
               목록을 불러오지 못했습니다. {error.message}
             </p>
           </CardContent>
@@ -155,15 +155,42 @@ export default function AdvertisersPage() {
       )}
 
       {isLoading && (
-        <p className="text-slate-600">목록 불러오는 중…</p>
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <li key={i}>
+              <Card className="h-full border-slate-100 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-12 shrink-0" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-12 shrink-0" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <div className="pt-2 mt-2 border-t border-slate-50">
+                    <Skeleton className="h-3 w-24 mb-1" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            </li>
+          ))}
+        </ul>
       )}
 
       {!isLoading && !error && advertisers && advertisers.length === 0 && (
-        <Card className="border-slate-200">
+        <Card className="border-slate-100 bg-white shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-slate-400" />
-            <p className="mt-4 text-slate-600">등록된 광고주가 없습니다.</p>
-            <Button asChild className="mt-4">
+            <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+              <Users className="h-8 w-8 text-slate-400" />
+            </div>
+            <p className="text-slate-600 font-medium">등록된 광고주가 없습니다.</p>
+            <Button asChild className="mt-4 bg-indigo-600 hover:bg-indigo-700 shadow-md">
               <Link href="/advertisers/new" className="gap-2">
                 <Plus className="h-4 w-4" />
                 광고주 등록
@@ -174,47 +201,64 @@ export default function AdvertisersPage() {
       )}
 
       {!isLoading && !error && advertisers && advertisers.length > 0 && (
-        <ul className="space-y-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredAdvertisers.length === 0 ? (
-            <Card className="border-slate-200">
-              <CardContent className="py-8 text-center text-slate-600">
-                검색 결과가 없습니다. 다른 검색어를 입력해 보세요.
-              </CardContent>
-            </Card>
-          ) : (
-          filteredAdvertisers.map((adv) => (
-            <li key={adv.id}>
-              <Card className="border-slate-200">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <h2 className="text-lg font-semibold">{adv.name}</h2>
-                  <div className="flex gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/advertisers/${adv.id}/edit`} className="gap-1">
-                        <Pencil className="h-3.5 w-3.5" />
-                        수정
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDeleteTarget(adv)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      삭제
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm text-slate-600">
-                  <p>이메일: {adv.email}</p>
-                  {adv.contactName && (
-                    <p>광고주 담당자: {adv.contactName}</p>
-                  )}
-                  <p>캠페인 담당자: {adv.campaignManagerName} ({adv.campaignManagerEmail})</p>
+            <div className="col-span-full">
+              <Card className="border-slate-100 bg-white shadow-sm">
+                <CardContent className="py-12 text-center text-slate-500">
+                  검색 결과가 없습니다. 다른 검색어를 입력해 보세요.
                 </CardContent>
               </Card>
-            </li>
-          ))
+            </div>
+          ) : (
+            filteredAdvertisers.map((adv) => (
+              <li key={adv.id}>
+                <Card className="h-full border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-100 group">
+                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                    <h2 className="text-lg font-bold text-slate-900 line-clamp-1" title={adv.name}>{adv.name}</h2>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
+                          <span className="sr-only">메뉴 열기</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/advertisers/${adv.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                            <Pencil className="h-4 w-4" />
+                            수정
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                          onSelect={() => setDeleteTarget(adv)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-slate-500">
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0 font-medium text-slate-700 min-w-[50px]">이메일</span>
+                      <span className="break-all">{adv.email || "-"}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0 font-medium text-slate-700 min-w-[50px]">담당자</span>
+                      <span>{adv.contactName || "-"}</span>
+                    </div>
+                    {adv.campaignManagerName && (
+                      <div className="pt-2 border-t border-slate-50 mt-2">
+                        <p className="text-xs font-medium text-indigo-600 mb-0.5">캠페인 담당자</p>
+                        <p>{adv.campaignManagerName} ({adv.campaignManagerEmail})</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </li>
+            ))
           )}
         </ul>
       )}

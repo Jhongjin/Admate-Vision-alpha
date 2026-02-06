@@ -1,7 +1,10 @@
 /**
  * 지하철 역명판 OCR 결과에서 역명·역번호(호선 추정) 추출.
- * 예: "529 공 덕 Gongdeok" → stationNumber 529, line "5호선", stationName "공덕"
+ * 역명이 화이트리스트에 있으면 역명→호선 매칭으로 호선 자동 결정(예: 여의도 → 5호선).
+ * 1·2·5·7·8호선만 사용하며, 나머지 호선 정보는 제외.
  */
+
+import { getLineForStation, getStationNameFromNumber, isKnownStationName, isSupportedLine } from "./station-whitelist";
 
 export type StationFromOcrResult = {
   /** 역번호 (예: 529) - 호선 추정에 사용 */
@@ -26,6 +29,8 @@ const INVALID_STATION_PHRASES = [
   "배포해줘",
   "배포해주",
   "배포에주",
+  "도시",
+  "신한",
 ];
 
 function isInvalidStationName(name: string): boolean {
@@ -49,8 +54,10 @@ function extractKoreanStationName(text: string): string | null {
       const afterNum = text.slice(idx + numStr.length);
       const afterKorean = afterNum.match(koreanBlock);
       if (afterKorean?.length) {
-        const near = afterKorean[0].replace(/\s/g, "");
-        if (near.length >= 2 && near.length <= 4 && !isInvalidStationName(near)) return near;
+        // OCR이 "군 자"를 "군", "자"로 분리하는 경우 합쳐서 역명 후보 생성 (예: 군자)
+        const joined = afterKorean.join("").replace(/\s/g, "");
+        const trimmed = joined.slice(0, 6);
+        if (trimmed.length >= 2 && !isInvalidStationName(trimmed)) return trimmed;
       }
     }
   }
@@ -70,12 +77,37 @@ function extractStationNumber(text: string): number | null {
 
 /**
  * OCR 텍스트에서 역명·역번호·호선 추출.
+ * 역명은 화이트리스트(1·2·5·7·8호선)에 있을 때만 반환.
+ * 호선은 역명→호선 매칭으로 결정(예: 여의도 → 5호선). 1·2·5·7·8호선만 허용.
  */
+/** 역명 후보 문자열에서 화이트리스트에 있는 역명 추출 (접두사 2~4글자 시도). 예: "군자능동" → "군자" */
+function resolveStationName(rawName: string): string | null {
+  if (!rawName || rawName.length < 2) return null;
+  for (let len = Math.min(4, rawName.length); len >= 2; len--) {
+    const candidate = rawName.slice(0, len);
+    if (isKnownStationName(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function parseStationFromOcr(ocrText: string): StationFromOcrResult {
   const trimmed = (ocrText ?? "").trim();
   const stationNumber = extractStationNumber(trimmed);
-  const line = stationNumber != null ? lineFromStationNumber(stationNumber) : null;
-  const stationName = extractKoreanStationName(trimmed);
+  const rawName = extractKoreanStationName(trimmed);
+  let stationName = rawName != null ? resolveStationName(rawName) : null;
+
+  let line: string | null = null;
+  if (stationName != null) {
+    line = getLineForStation(stationName);
+  } else if (stationNumber != null) {
+    const fromNum = lineFromStationNumber(stationNumber);
+    line = fromNum != null && isSupportedLine(fromNum) ? fromNum : null;
+    // 역번호만 인식되고 역명 OCR 실패 시, 역번호→역명 매핑으로 보조 추정 (예: 544→군자)
+    if (stationName == null && line != null) {
+      stationName = getStationNameFromNumber(stationNumber);
+    }
+  }
+
   return {
     stationNumber,
     line,

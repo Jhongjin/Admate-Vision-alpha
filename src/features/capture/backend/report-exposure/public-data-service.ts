@@ -1,10 +1,12 @@
 /**
  * Phase 2: 공공데이터 유동인구(승하차) 조회·캐시.
  * DATA_GO_KR_SERVICE_KEY 설정 시 실제 API 호출, 미설정 시 목 데이터 반환.
+ * 역명은 실제 서울 지하철 역명 화이트리스트에 있을 때만 조회(존재하지 않는 역명 시 유동인구 미첨부).
  */
 
 import type { StationFlowData, TimeBandFlow } from "./types";
 import { normalizeStationName, normalizeLineName } from "./station-mapping";
+import { isKnownStationName } from "@/features/capture/lib/station-whitelist";
 
 const DATA_GO_KR_SERVICE_KEY = process.env.DATA_GO_KR_SERVICE_KEY ?? "";
 const DATA_GO_KR_STATION_FLOW_ENDPOINT =
@@ -171,13 +173,18 @@ function getMockFlowData(stationName: string, lineName: string): StationFlowData
 
 /**
  * 역·호선별 유동인구 조회.
+ * 역명이 실제 서울 지하철 역명이 아니면 조회하지 않음(유동인구 데이터 정합성).
  * API 키·엔드포인트 설정 시 실제 공공 API 호출, 그 외에는 목 데이터 반환. 캐시 적용.
  */
 export async function fetchStationFlow(
   station: string,
   line: string
 ): Promise<{ ok: true; data: StationFlowData } | { ok: false; error: string }> {
-  const key = `${normalizeStationName(station)}|${normalizeLineName(line)}`;
+  const normalizedStation = normalizeStationName(station);
+  if (!isKnownStationName(normalizedStation)) {
+    return { ok: false, error: "INVALID_STATION" };
+  }
+  const key = `${normalizedStation}|${normalizeLineName(line)}`;
   const cached = flowCache.get(key);
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
     return { ok: true, data: cached.data };

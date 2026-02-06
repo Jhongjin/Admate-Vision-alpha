@@ -9,6 +9,8 @@ const VISION_API_URL =
 export type ServerOcrResult = {
   text: string;
   confidence: number;
+  /** 역명 추출용: 바운딩 박스 면적이 큰 텍스트부터 나열(지하철 역명이 가장 크게 쓰인 경우 대비) */
+  textForStation?: string;
 };
 
 /**
@@ -50,10 +52,14 @@ export async function runGoogleVisionOcr(
 
   if (!res.ok) return null;
 
+  type Vertex = { x?: number; y?: number };
   const data = (await res.json()) as {
     responses?: Array<{
       fullTextAnnotation?: { text?: string };
-      textAnnotations?: Array<{ description?: string }>;
+      textAnnotations?: Array<{
+        description?: string;
+        boundingPoly?: { vertices?: Vertex[] };
+      }>;
     }>;
   };
 
@@ -67,8 +73,30 @@ export async function runGoogleVisionOcr(
   const text = fullText ?? fallbackText ?? "";
   if (!text) return null;
 
+  let textForStation: string | undefined;
+  const annotations = first.textAnnotations;
+  if (annotations && annotations.length > 1) {
+    const withArea = annotations.slice(1).map((a) => {
+      const desc = (a.description ?? "").trim();
+      const verts = a.boundingPoly?.vertices ?? [];
+      let area = 0;
+      if (verts.length >= 2) {
+        const xs = verts.map((v) => v.x ?? 0);
+        const ys = verts.map((v) => v.y ?? 0);
+        const w = Math.max(0, ...xs) - Math.min(...xs);
+        const h = Math.max(0, ...ys) - Math.min(...ys);
+        area = w * h;
+      }
+      return { desc, area };
+    });
+    withArea.sort((a, b) => b.area - a.area);
+    const largestFirst = withArea.map((a) => a.desc).filter(Boolean).join(" ");
+    if (largestFirst) textForStation = largestFirst;
+  }
+
   return {
     text,
     confidence: 0.95,
+    textForStation,
   };
 }

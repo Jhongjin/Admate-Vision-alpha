@@ -46,24 +46,24 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
       <PublicHeader />
 
       <main className="flex flex-1 flex-col items-center justify-center safe-area-padding-x py-8">
-        <div className="container w-full">
-          <div className="mb-6 text-center">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+        <div className="container max-w-md w-full">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               Sign In
             </h1>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-500">
               가입한 이메일로 로그인하세요.
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="overflow-hidden rounded-2xl border border-white/50 bg-white/80 p-6 shadow-xl shadow-slate-200/20 backdrop-blur-xl sm:p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700">
+                <Label htmlFor="email" className="text-slate-700 font-medium">
                   이메일
                 </Label>
                 <Input
@@ -76,7 +76,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isSubmitting}
-                  className="min-h-[48px] border-slate-200 bg-white text-base"
+                  className="h-12 border-slate-200 bg-white px-4 text-base focus-visible:ring-indigo-500"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -84,7 +84,7 @@ export default function LoginPage() {
                   id="keepLoggedIn"
                   checked={keepLoggedIn}
                   onCheckedChange={(v) => setKeepLoggedIn(v === true)}
-                  className="border-slate-300"
+                  className="border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                 />
                 <Label
                   htmlFor="keepLoggedIn"
@@ -96,21 +96,21 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="min-h-[48px] w-full"
+                className="h-12 w-full text-base font-semibold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "로그인 중…" : "Sign In"}
               </Button>
             </form>
-            <p className="mt-4 text-center text-sm text-slate-500">
+            <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-500">
               계정이 없으신가요?{" "}
               <Link
                 href="/signup"
-                className="font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline decoration-2 underline-offset-2"
               >
                 Sign Up
               </Link>
-            </p>
+            </div>
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-500">

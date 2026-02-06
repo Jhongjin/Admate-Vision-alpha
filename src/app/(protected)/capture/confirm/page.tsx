@@ -4,9 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import JSZip from "jszip";
-import { MapPin, Building2, Send, FileImage, Download, Replace, RotateCcw, RotateCw } from "lucide-react";
+import { MapPin, Building2, Send, FileImage, Download, Replace, RotateCcw, RotateCw, MapPinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,8 +39,8 @@ import { useToast } from "@/hooks/use-toast";
 const FALLBACK = {
   location: "위치 정보 없음",
   advertiser: "광고주 미인식",
-  station: "역명 미인식",
-  line: "호선 미인식",
+  station: "미인식",
+  line: "미인식",
 };
 
 function buildNoLocationFilename(
@@ -51,18 +59,22 @@ function buildNoLocationFilename(
   return `${parts.join("_")}.jpg`;
 }
 
-function runOcr(imageDataUrl: string): Promise<string> {
+function runOcr(
+  imageDataUrl: string
+): Promise<{ text: string; textForStation?: string }> {
   return fetch("/api/capture/ocr", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ imageDataUrl }),
   })
     .then((res) => {
-      if (res.ok) return res.json() as Promise<{ text: string }>;
+      if (res.ok)
+        return res.json() as Promise<{ text: string; textForStation?: string }>;
       return Promise.reject(new Error("Server OCR unavailable"));
     })
-    .then((body) => body.text)
-    .catch(() => extractTextFromImage(imageDataUrl).then((ocr) => ocr.text));
+    .catch(() =>
+      extractTextFromImage(imageDataUrl).then((ocr) => ({ text: ocr.text }))
+    );
 }
 
 export default function CaptureConfirmPage() {
@@ -94,11 +106,15 @@ export default function CaptureConfirmPage() {
   const [selectedImageIndices, setSelectedImageIndices] = useState<Set<number>>(new Set());
   const [imageRotating, setImageRotating] = useState(false);
   const [bulkFind, setBulkFind] = useState("");
+  /** 역명 미인식 시 안내 시트 (재촬영/일단 저장) */
+  const [showNoStationSheet, setShowNoStationSheet] = useState(false);
+  const [hasShownNoStationSheet, setHasShownNoStationSheet] = useState(false);
   const [bulkReplace, setBulkReplace] = useState("");
   const [metaLoading, setMetaLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [reportSending, setReportSending] = useState(false);
   const [includePpt, setIncludePpt] = useState(false);
+  /** 게재 기간(일). 0이면 빈 칸(미입력), 발송 시 0/미입력이면 7일로 전달 */
   const [displayDays, setDisplayDays] = useState(7);
   const router = useRouter();
   const { toast } = useToast();
@@ -136,7 +152,8 @@ export default function CaptureConfirmPage() {
     setAdvertiserLabel(null);
     const imageDataUrl = data.imageDataUrl;
     runOcr(imageDataUrl)
-      .then((text) => {
+      .then((ocrBody) => {
+        const text = ocrBody.text;
         const match = matchOcrToAdvertiser(text, advertisers);
         setAdvertiserLabel(match ? match.advertiserName : null);
         setMatchedAdvertiserId(match ? match.advertiserId : null);
@@ -172,10 +189,11 @@ export default function CaptureConfirmPage() {
 
     if (session.locationImage) {
       try {
-        const [locOcrText, lineFromColor] = await Promise.all([
+        const [locOcrResult, lineFromColor] = await Promise.all([
           runOcr(session.locationImage),
           getSubwayLineFromImage(session.locationImage),
         ]);
+        const locOcrText = locOcrResult.textForStation ?? locOcrResult.text;
         const station = parseStationFromOcr(locOcrText);
         resolvedStation = station.stationName ?? FALLBACK.station;
         resolvedLine = station.line ?? lineFromColor ?? FALLBACK.line;
@@ -194,7 +212,8 @@ export default function CaptureConfirmPage() {
       const firstAdUrl = ads[0]?.imageDataUrl;
       if (firstAdUrl) {
         runOcr(firstAdUrl)
-          .then((adOcrText) => {
+          .then((ocrBody) => {
+            const adOcrText = ocrBody.text;
             const match = matchOcrToAdvertiser(adOcrText, advertiserList);
             const advertiser = match ? match.advertiserName : FALLBACK.advertiser;
             setAdvertiserLabel(match ? match.advertiserName : null);
@@ -209,13 +228,13 @@ export default function CaptureConfirmPage() {
               session.skipLocation
                 ? buildNoLocationFilename(advertiser, "", dateStr, i + 1)
                 : buildCaptureFilename(
-                    advertiser,
-                    resolvedLine,
-                    resolvedStation,
-                    "",
-                    dateStr,
-                    i + 1
-                  )
+                  advertiser,
+                  resolvedLine,
+                  resolvedStation,
+                  "",
+                  dateStr,
+                  i + 1
+                )
             );
             setGeneratedFilenames(names);
           })
@@ -255,13 +274,13 @@ export default function CaptureConfirmPage() {
           session.skipLocation
             ? buildNoLocationFilename(FALLBACK.advertiser, "", dateStr, i + 1)
             : buildCaptureFilename(
-                FALLBACK.advertiser,
-                FALLBACK.line,
-                FALLBACK.station,
-                "",
-                dateStr,
-                i + 1
-              )
+              FALLBACK.advertiser,
+              FALLBACK.line,
+              FALLBACK.station,
+              "",
+              dateStr,
+              i + 1
+            )
         )
       );
     } finally {
@@ -289,22 +308,35 @@ export default function CaptureConfirmPage() {
       data.adImages.map((_, i) =>
         data.skipLocation
           ? buildNoLocationFilename(
-              metaForFilename.advertiser,
-              userEnteredName,
-              metaForFilename.dateStr,
-              i + 1
-            )
+            metaForFilename.advertiser,
+            userEnteredName,
+            metaForFilename.dateStr,
+            i + 1
+          )
           : buildCaptureFilename(
-              metaForFilename.advertiser,
-              metaForFilename.line,
-              metaForFilename.station,
-              userEnteredName,
-              metaForFilename.dateStr,
-              i + 1
-            )
+            metaForFilename.advertiser,
+            metaForFilename.line,
+            metaForFilename.station,
+            userEnteredName,
+            metaForFilename.dateStr,
+            i + 1
+          )
       )
     );
   }, [userEnteredName, metaForFilename, data]);
+
+  /** 역명 미인식 시 한 번만 안내 시트 표시 (광고주 미인식과 동일한 UX) */
+  useEffect(() => {
+    if (
+      !metaLoading &&
+      data?.locationImage &&
+      (stationName === FALLBACK.station || stationName === "미인식") &&
+      !hasShownNoStationSheet
+    ) {
+      setShowNoStationSheet(true);
+      setHasShownNoStationSheet(true);
+    }
+  }, [metaLoading, data?.locationImage, stationName, hasShownNoStationSheet]);
 
   const hasGps = data?.lat != null && data?.lng != null;
   const locationText = (() => {
@@ -543,7 +575,7 @@ export default function CaptureConfirmPage() {
           zipBase64,
           zipFilename,
           includePpt: includePpt || undefined,
-          displayDays: includePpt ? displayDays : undefined,
+          displayDays: includePpt ? (displayDays && displayDays >= 1 ? displayDays : 7) : undefined,
         }),
       });
       let json: { ok?: boolean; message?: string; error?: string; savedToHistory?: boolean };
@@ -614,10 +646,10 @@ export default function CaptureConfirmPage() {
   }
 
   return (
-    <div className="container py-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">촬영 확인</h1>
-        <p className="mt-1 text-secondary-500">
+    <div className="container py-8 bg-slate-50 min-h-screen">
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">촬영 확인</h1>
+        <p className="mt-1 text-slate-500">
           촬영 내용을 확인한 뒤 보고를 발송하세요.
           {isMultiSession && " 저장 시 아래 파일명이 적용됩니다."}
         </p>
@@ -626,21 +658,27 @@ export default function CaptureConfirmPage() {
       {isMultiSession ? (
         <>
           {data.skipLocation && (
-            <Card className="mb-6 border-amber-200 bg-amber-50/50">
+            <Card className="mb-6 border-amber-200 bg-amber-50/50 shadow-sm">
               <CardHeader className="pb-2">
-                <span className="text-sm font-medium text-amber-800">위치 없음 세션</span>
+                <span className="text-sm font-bold text-amber-800 flex items-center gap-2">
+                  <MapPinOff className="h-4 w-4" />
+                  위치 없음 세션
+                </span>
               </CardHeader>
               <CardContent className="text-sm text-amber-700">
-                역명·호선은 미촬영 상태로 &quot;역명 미인식&quot;, &quot;호선 미인식&quot;으로 표시됩니다.
+                역명·호선은 미촬영 시 &quot;미인식&quot;으로 표시됩니다.
               </CardContent>
             </Card>
           )}
           {data.locationImage && (
-            <Card className="mb-6 overflow-hidden border-secondary-200">
-              <CardHeader className="pb-2">
-                <span className="text-sm font-medium text-secondary-600">위치(역명) 사진</span>
+            <Card className="mb-6 overflow-hidden border-slate-100 bg-white shadow-sm">
+              <CardHeader className="pb-3 border-b border-slate-50">
+                <span className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-indigo-500" />
+                  위치(역명) 사진
+                </span>
               </CardHeader>
-              <div className="relative aspect-video w-full bg-gray-100">
+              <div className="relative aspect-video w-full bg-slate-100">
                 <img
                   src={data.locationImage}
                   alt="역명판"
@@ -648,34 +686,42 @@ export default function CaptureConfirmPage() {
                 />
               </div>
               {(metaLoading || stationName != null || subwayLine != null) && (
-                <CardContent className="space-y-1 pt-2 text-sm">
+                <CardContent className="space-y-2 pt-4 text-sm">
                   {metaLoading ? (
-                    <p className="text-secondary-500">역명·호선 인식 중...</p>
+                    <p className="text-slate-500 flex items-center gap-2">
+                      <RotateCw className="h-3 w-3 animate-spin" />
+                      역명·호선 인식 중...
+                    </p>
                   ) : (
-                    <>
-                      <p className="text-gray-700">
-                        <span className="font-medium">역명:</span> {stationName ?? FALLBACK.station}
-                      </p>
-                      <p className="text-gray-700">
-                        <span className="font-medium">호선:</span> {subwayLine ?? FALLBACK.line}
-                      </p>
-                    </>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                        <span className="block text-xs text-slate-500 mb-0.5">역명</span>
+                        <span className="font-bold text-slate-900 text-lg">{stationName ?? FALLBACK.station}</span>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
+                        <span className="block text-xs text-slate-500 mb-0.5">호선</span>
+                        <span className="font-bold text-slate-900 text-lg">{subwayLine ?? FALLBACK.line}</span>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               )}
             </Card>
           )}
 
-          <Card className="mb-6 overflow-hidden border-secondary-200">
-            <CardHeader className="pb-2">
+          <Card className="mb-6 overflow-hidden border-slate-100 bg-white shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-50">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-medium text-secondary-600">광고 사진 ({data.adImages.length}장)</span>
+                <span className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <FileImage className="h-4 w-4 text-indigo-500" />
+                  광고 사진 ({data.adImages.length}장)
+                </span>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
+                    className="h-8 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
                     onClick={selectAllImages}
                   >
                     전체 선택
@@ -684,7 +730,7 @@ export default function CaptureConfirmPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 gap-1 text-xs"
+                    className="h-8 gap-1 text-xs border-slate-200"
                     disabled={selectedImageIndices.size === 0 || imageRotating}
                     onClick={() => rotateSelected("left")}
                   >
@@ -695,7 +741,7 @@ export default function CaptureConfirmPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 gap-1 text-xs"
+                    className="h-8 gap-1 text-xs border-slate-200"
                     disabled={selectedImageIndices.size === 0 || imageRotating}
                     onClick={() => rotateSelected("right")}
                   >
@@ -705,64 +751,65 @@ export default function CaptureConfirmPage() {
                 </div>
               </div>
             </CardHeader>
-            <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 bg-slate-50/50">
               {data.adImages.map((ad, i) => (
-                <div key={i} className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
-                  <label className="absolute left-1.5 top-1.5 z-10 flex items-center gap-1 rounded bg-black/50 p-1">
+                <div key={i} className="relative aspect-square overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-900/5 shadow-sm group">
+                  <label className="absolute left-2 top-2 z-10 flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-sm px-2 py-1 transition-transform active:scale-95 cursor-pointer">
                     <Checkbox
                       checked={selectedImageIndices.has(i)}
                       onCheckedChange={() => toggleImageSelection(i)}
-                      className="border-white data-[state=checked]:bg-white data-[state=checked]:text-gray-900"
+                      className="border-white/80 data-[state=checked]:bg-white data-[state=checked]:text-black h-3.5 w-3.5 rounded-full"
                     />
-                    <span className="text-xs text-white">{(i + 1).toString()}</span>
+                    <span className="text-xs font-medium text-white shadow-black drop-shadow-md">{(i + 1).toString()}</span>
                   </label>
                   <img
                     src={ad.imageDataUrl}
                     alt={`광고 ${i + 1}`}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute bottom-1.5 right-1.5 flex gap-1">
+                  <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       type="button"
                       variant="secondary"
                       size="icon"
-                      className="h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70"
+                      className="h-7 w-7 rounded-full bg-white/90 text-slate-700 shadow-sm hover:bg-white"
                       disabled={imageRotating}
                       onClick={() => rotateImageAt(i, "left")}
                       title="왼쪽 90° 회전"
                     >
-                      <RotateCcw className="h-4 w-4" />
+                      <RotateCcw className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       size="icon"
-                      className="h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70"
+                      className="h-7 w-7 rounded-full bg-white/90 text-slate-700 shadow-sm hover:bg-white"
                       disabled={imageRotating}
                       onClick={() => rotateImageAt(i, "right")}
                       title="오른쪽 90° 회전"
                     >
-                      <RotateCw className="h-4 w-4" />
+                      <RotateCw className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
               ))}
             </div>
             {editedFilenames.length > 0 && (
-              <CardContent className="border-t border-secondary-200 pt-4 space-y-4">
+              <CardContent className="border-t border-slate-100 pt-6 space-y-4 bg-white">
                 <div>
-                  <Label htmlFor="user-entered-name" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="user-entered-name" className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Replace className="h-4 w-4 text-indigo-500" />
                     사용자직접기입명 (추가 이름)
                   </Label>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    파일명에 일괄 추가됩니다. 예: DL16 입력 시 …_공덕_DL16_20260203_01.jpg
+                  <p className="text-xs text-slate-500 mt-1 mb-2">
+                    파일명에 일괄 추가됩니다. 예: <span className="font-mono bg-slate-100 px-1 rounded">DL16</span> 입력 시 …_공덕_DL16_20260203_01.jpg
                   </p>
                   <Input
                     id="user-entered-name"
                     placeholder="예: DL16"
                     value={userEnteredName}
                     onChange={(e) => setUserEnteredName(e.target.value)}
-                    className="mt-1.5 max-w-xs"
+                    className="max-w-sm border-slate-200 focus-visible:ring-indigo-500 h-10"
                   />
                 </div>
 
@@ -963,7 +1010,7 @@ export default function CaptureConfirmPage() {
                   className="border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                 />
                 <Label htmlFor="include-ppt" className="text-sm font-medium text-gray-900 cursor-pointer">
-                  PPT 노출량 보고서 포함 (역·호선 유동인구 기반)
+                  AI 성과 분석 리포트 생성 (이메일에 링크 포함)
                 </Label>
               </div>
               {includePpt && (
@@ -974,8 +1021,17 @@ export default function CaptureConfirmPage() {
                     type="number"
                     min={1}
                     max={365}
-                    value={displayDays}
-                    onChange={(e) => setDisplayDays(Math.max(1, Math.min(365, Number(e.target.value) || 7)))}
+                    placeholder="7"
+                    value={displayDays >= 1 ? displayDays : ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "" || v == null) {
+                        setDisplayDays(0);
+                        return;
+                      }
+                      const n = Number(v);
+                      if (!Number.isNaN(n)) setDisplayDays(Math.max(1, Math.min(365, n)));
+                    }}
                     className="h-9 w-20 border-slate-300 bg-white text-gray-900"
                   />
                 </div>
@@ -1013,6 +1069,35 @@ export default function CaptureConfirmPage() {
           </Button>
         </CardFooter>
       </Card>
+
+      <Sheet open={showNoStationSheet} onOpenChange={setShowNoStationSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>역명을 인식하지 못했습니다</SheetTitle>
+            <SheetDescription>
+              역명판에서 역명을 찾지 못했습니다. 재촬영하거나 일단 저장할 수 있습니다.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="flex-row flex-wrap gap-3 sm:gap-3 mt-6">
+            <Button
+              variant="outline"
+              className="flex-1 min-w-[100px]"
+              onClick={() => {
+                setShowNoStationSheet(false);
+                router.push("/capture");
+              }}
+            >
+              재촬영 시도
+            </Button>
+            <Button
+              className="flex-1 min-w-[100px]"
+              onClick={() => setShowNoStationSheet(false)}
+            >
+              일단 저장
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

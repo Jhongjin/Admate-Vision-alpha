@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import { ArrowLeft, Upload, AlertCircle, CheckCircle2, FileUp, Download } from "lucide-react";
+import { ArrowLeft, Upload, AlertCircle, CheckCircle2, FileUp, Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { createAdvertisersBulk, extractApiErrorMessage } from "@/features/advertisers/api";
 import type { AdvertiserCreate, AdvertiserBulkResult } from "@/features/advertisers/backend/schema";
 import { AdvertiserCreateSchema } from "@/features/advertisers/backend/schema";
@@ -188,24 +189,24 @@ export default function AdvertisersBulkPage() {
 
   return (
     <div className="container py-8">
-      <header className="mb-6">
-        <Button asChild variant="ghost" size="sm" className="mb-4 gap-1">
+      <header className="mb-8">
+        <Button asChild variant="ghost" size="sm" className="mb-4 gap-1 text-slate-500 hover:text-slate-900 -ml-2">
           <Link href="/advertisers">
             <ArrowLeft className="h-4 w-4" />
             목록으로
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold text-slate-900">광고주 벌크 등록</h1>
-        <p className="mt-1 text-slate-600">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">광고주 벌크 등록</h1>
+        <p className="mt-1 text-slate-500">
           CSV 파일을 업로드하면 한 번에 등록합니다. 광고주명 기준 중복 검사 및 옵션(덮어쓰기/건너뛰기)이 적용됩니다.
         </p>
       </header>
 
-      <Card className="mb-6 border-slate-200">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">CSV 파일 업로드</h2>
+      <Card className="mb-6 border-slate-100 bg-white shadow-sm">
+        <CardHeader className="border-b border-slate-50 pb-4">
+          <h2 className="text-lg font-bold text-slate-800">CSV 파일 업로드</h2>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 text-sm text-slate-700">
             <p className="font-medium text-slate-800 mb-2">안내</p>
             <ul className="list-inside list-disc space-y-1">
@@ -224,33 +225,61 @@ export default function AdvertisersBulkPage() {
             </ul>
           </div>
 
-          <div>
-            <Label className="text-slate-700">CSV 형식</Label>
-            <p className="mt-1 text-xs text-slate-500">
-              첫 줄은 헤더로 두거나 생략할 수 있습니다. 아래 열 순서와 필수/옵션을 지켜 주세요.
-            </p>
-            <ul className="mt-2 space-y-1 text-sm text-slate-700">
-              <li><strong>광고주명</strong> — 필수</li>
-              <li><strong>이메일</strong> — 필수</li>
-              <li><strong>광고주담당자</strong> — 옵션 (비워두면 무시)</li>
-              <li><strong>캠페인담당자이름</strong> — 필수</li>
-              <li><strong>캠페인담당자이메일</strong> — 필수</li>
-              <li><strong>검색어</strong> — 옵션 (쉼표·세미콜론으로 여러 개 입력 가능)</li>
-            </ul>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <pre className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                {CSV_HEADER}
-              </pre>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={downloadSampleCSV}
-              >
-                <Download className="h-3.5 w-3.5" />
-                CSV 양식 샘플 다운로드
-              </Button>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-indigo-600" />
+              <Label className="text-base font-semibold text-slate-800">CSV 파일 형식</Label>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="mb-3 text-sm text-slate-600">
+                아래 열 순서를 정확히 지켜주세요. 첫 줄(헤더)은 포함하거나 생략할 수 있습니다.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+                {[
+                  { name: "광고주명", req: true },
+                  { name: "이메일", req: true },
+                  { name: "광고주담당자", req: false },
+                  { name: "캠페인담당자이름", req: true },
+                  { name: "캠페인담당자이메일", req: true },
+                  { name: "검색어", req: false, desc: "쉼표 구분" },
+                ].map((col) => (
+                  <div key={col.name} className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2">
+                    <span className="text-sm font-medium text-slate-700">{col.name}</span>
+                    <Badge variant={col.req ? "default" : "secondary"} className={col.req ? "bg-indigo-600 hover:bg-indigo-700" : "bg-slate-200 text-slate-600 hover:bg-slate-200"}>
+                      {col.req ? "필수" : "선택"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-slate-500">CSV 헤더 예시</p>
+                <div className="relative rounded-md bg-slate-900 p-3">
+                  <pre className="overflow-x-auto text-xs text-indigo-100/90 font-mono hide-scrollbar">
+                    {CSV_HEADER}
+                  </pre>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-1 top-1 h-6 w-6 text-slate-400 hover:text-white"
+                    onClick={() => navigator.clipboard.writeText(CSV_HEADER)}
+                    title="복사"
+                  >
+                    <FileUp className="h-3.5 w-3.5 rotate-90" />
+                  </Button>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+                    onClick={downloadSampleCSV}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    샘플 CSV 다운로드
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -311,7 +340,7 @@ export default function AdvertisersBulkPage() {
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting || rows.length === 0}
-              className="gap-2"
+              className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
             >
               <Upload className="h-4 w-4" />
               {isSubmitting ? "등록 중…" : `${rows.length}건 등록`}

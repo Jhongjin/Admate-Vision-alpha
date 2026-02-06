@@ -88,13 +88,13 @@ export function AdvertiserForm({
     resolver: zodResolver(AdvertiserCreateSchema),
     defaultValues: defaultValues
       ? {
-          name: defaultValues.name ?? "",
-          email: defaultValues.email ?? "",
-          contactName: defaultValues.contactName ?? "",
-          campaignManagerName: defaultValues.campaignManagerName ?? "",
-          campaignManagerEmail: defaultValues.campaignManagerEmail ?? "",
-          searchTerms: defaultValues.searchTerms ?? [],
-        }
+        name: defaultValues.name ?? "",
+        email: defaultValues.email ?? "",
+        contactName: defaultValues.contactName ?? "",
+        campaignManagerName: defaultValues.campaignManagerName ?? "",
+        campaignManagerEmail: defaultValues.campaignManagerEmail ?? "",
+        searchTerms: defaultValues.searchTerms ?? [],
+      }
       : defaultFormValues,
   });
 
@@ -203,8 +203,8 @@ export function AdvertiserForm({
             <SearchTermsInput field={field} />
           )}
         />
-        <div className="flex gap-2 pt-2">
-          <Button type="submit" disabled={isLoading}>
+        <div className="flex gap-2 pt-4">
+          <Button type="submit" disabled={isLoading} size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 font-bold">
             {isLoading ? "저장 중…" : submitLabel}
           </Button>
         </div>

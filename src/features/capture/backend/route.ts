@@ -7,6 +7,8 @@ import { sendReportEmail } from "./report-email";
 import { fetchStationFlow } from "./report-exposure/public-data-service";
 import { calculateExposure } from "./report-exposure/exposure-calc";
 import { generateReportPpt } from "./report-exposure/ppt-generator";
+import { extractImageBase64sFromZip } from "./report-exposure/zip-to-images";
+import { generateAiAnalysis } from "./ai-analysis-service";
 
 /** OCR API rate limit: 분당 최대 요청 수 (IP당) */
 const OCR_RATE_LIMIT_PER_MIN = 30;
@@ -91,6 +93,7 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
     return c.json({
       text: result.text,
       confidence: result.confidence,
+      textForStation: result.textForStation,
     });
   });
 
@@ -134,14 +137,20 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
           displayDays,
         });
         try {
+          const imageBase64s = payload.zipBase64
+            ? await extractImageBase64sFromZip(payload.zipBase64)
+            : undefined;
           const pptBuffer = await generateReportPpt({
             advertiserName: payload.advertiserName ?? adv.name,
             station: payload.station,
             line: payload.line,
             displayDays,
             exposure,
+            imageBase64s: imageBase64s?.length ? imageBase64s : undefined,
             subtitle: payload.userEnteredName ?? undefined,
             dateStr,
+            campaignManagerName: adv.campaignManagerName ?? undefined,
+            campaignManagerEmail: adv.campaignManagerEmail ?? undefined,
           });
           const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
           const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
@@ -154,6 +163,47 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         }
       }
     }
+
+
+    const sentToEmail =
+      payload.primaryRecipient === "advertiser" ? adv.email : adv.campaignManagerEmail;
+
+    let aiAnalysisData = null;
+    if (payload.station && payload.line && payload.advertiserName) {
+      try {
+        aiAnalysisData = await generateAiAnalysis({
+          station: payload.station,
+          line: payload.line,
+          advertiserName: payload.advertiserName,
+          dateStr,
+        });
+      } catch (e) {
+        console.error("AI Analysis Generation Failed", e);
+      }
+    }
+
+    const { data: insertedReport, error: insertErr } = await supabase.from("vision_ocr_reports").insert({
+      advertiser_id: payload.advertiserId,
+      advertiser_name: payload.advertiserName ?? adv.name,
+      station: payload.station ?? null,
+      line: payload.line ?? null,
+      location_label: payload.locationLabel ?? payload.userEnteredName ?? null,
+      image_count: payload.imageCount ?? null,
+      sent_to_email: sentToEmail ?? null,
+      ai_analysis: aiAnalysisData,
+    }).select().single();
+
+    if (insertErr || !insertedReport) {
+      console.error("[capture/report] vision_ocr_reports insert failed:", insertErr);
+      return c.json({
+        ok: false,
+        error: "DB_INSERT_FAILED",
+        message: "리포트 저장 중 오류가 발생했습니다.",
+      }, 500);
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const reportUrl = `${baseUrl}/reports/analysis/${insertedReport.id}`;
 
     const result = await sendReportEmail({
       primaryRecipient: payload.primaryRecipient as "advertiser" | "campaign",
@@ -170,36 +220,24 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       zipBase64: payload.zipBase64,
       zipFilename: payload.zipFilename,
       pptAttachment,
+      reportUrl,
     });
 
     if (!result.ok) {
+      // 이메일 발송 실패 시... 로그만 남기고 일단 성공 처리? 아니면 에러 리턴?
+      // 사용자는 "발송 실패"로 알아야 함.
       return c.json({
         ok: false,
         error: "EMAIL_SEND_FAILED",
-        message: result.error ?? "이메일 발송에 실패했습니다.",
+        message: result.error ?? "이메일 발송에 실패했습니다. (DB에는 저장됨)",
+        savedToHistory: true,
       }, 500);
-    }
-
-    const sentToEmail =
-      payload.primaryRecipient === "advertiser" ? adv.email : adv.campaignManagerEmail;
-    const { error: insertErr } = await supabase.from("vision_ocr_reports").insert({
-      advertiser_id: payload.advertiserId,
-      advertiser_name: payload.advertiserName ?? adv.name,
-      station: payload.station ?? null,
-      line: payload.line ?? null,
-      location_label: payload.locationLabel ?? payload.userEnteredName ?? null,
-      image_count: payload.imageCount ?? null,
-      sent_to_email: sentToEmail ?? null,
-    });
-    if (insertErr) {
-      console.error("[capture/report] vision_ocr_reports insert failed:", insertErr);
     }
 
     return c.json({
       ok: true,
       message: "보고 메일이 발송되었습니다.",
-      savedToHistory: !insertErr,
-      ...(insertErr && { savedToHistoryError: insertErr.message }),
+      savedToHistory: true,
     });
   });
 
@@ -214,5 +252,20 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       return c.json({ error: "DB_ERROR", message: error.message }, 500);
     }
     return c.json({ reports: data ?? [] });
+  });
+
+  /** 보고서 상세 및 AI 분석 결과 조회 */
+  app.get("/reports/:id", async (c) => {
+    const reportId = c.req.param("id");
+    const supabase = getSupabase(c);
+    const { data, error } = await supabase
+      .from("vision_ocr_reports")
+      .select("*, vision_ocr_advertisers(campaign_manager_name, campaign_manager_email, contact_name)")
+      .eq("id", reportId)
+      .single();
+    if (error) {
+      return c.json({ error: "DB_ERROR", message: error.message }, 500);
+    }
+    return c.json(data);
   });
 };

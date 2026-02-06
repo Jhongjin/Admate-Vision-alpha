@@ -32,11 +32,11 @@ export function ProtectedHeader() {
       <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/capture"
-          className="flex min-h-[44px] min-w-[44px] shrink-0 items-center text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600"
+          className="flex min-h-[44px] min-w-[44px] shrink-0 items-center text-base font-semibold tracking-tight text-slate-900 group"
         >
-          {BRAND.name} <span className="text-primary-600">Vision</span>
+          {BRAND.name} <span className="text-indigo-600 ml-1 group-hover:text-indigo-500 transition-colors">Vision</span>
         </Link>
-        <nav className="flex flex-1 items-center justify-end gap-0 overflow-x-auto overflow-y-hidden scrollbar-none">
+        <nav className="flex flex-1 items-center justify-end gap-1 overflow-x-auto overflow-y-hidden scrollbar-none pl-2">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Button
               key={href}
@@ -44,8 +44,10 @@ export function ProtectedHeader() {
               variant={pathname === href ? "secondary" : "ghost"}
               size="sm"
               className={cn(
-                "min-h-[44px] shrink-0 gap-1.5 px-3",
-                pathname === href && "bg-primary-100 text-primary-700"
+                "min-h-[40px] shrink-0 gap-1.5 px-3 rounded-full transition-all",
+                pathname === href
+                  ? "bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               )}
             >
               <Link href={href} className="flex items-center gap-1.5">

@@ -67,24 +67,24 @@ export default function SignupPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
       <PublicHeader />
 
       <main className="flex flex-1 flex-col items-center justify-center safe-area-padding-x py-8">
-        <div className="container w-full">
-          <div className="mb-6 text-center">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+        <div className="container max-w-md w-full">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               Sign Up
             </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              이름과 이메일만 입력하면 됩니다. DB에 저장되어 다음에도 사용할 수 있습니다.
+            <p className="mt-2 text-sm text-slate-500">
+              이름과 이메일만 입력하면 즉시 시작할 수 있습니다.
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="overflow-hidden rounded-2xl border border-white/50 bg-white/80 p-6 shadow-xl shadow-slate-200/20 backdrop-blur-xl sm:p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-700">
+                <Label htmlFor="name" className="text-slate-700 font-medium">
                   이름 (필수)
                 </Label>
                 <Input
@@ -97,11 +97,11 @@ export default function SignupPage() {
                   onChange={handleChange}
                   required
                   disabled={isSubmitting}
-                  className="min-h-[48px] border-slate-200 bg-white text-base"
+                  className="h-12 border-slate-200 bg-white px-4 text-base focus-visible:ring-indigo-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700">
+                <Label htmlFor="email" className="text-slate-700 font-medium">
                   이메일 (필수)
                 </Label>
                 <Input
@@ -114,13 +114,13 @@ export default function SignupPage() {
                   onChange={handleChange}
                   required
                   disabled={isSubmitting}
-                  className="min-h-[48px] border-slate-200 bg-white text-base"
+                  className="h-12 border-slate-200 bg-white px-4 text-base focus-visible:ring-indigo-500"
                 />
               </div>
               <Button
                 type="submit"
                 size="lg"
-                className="min-h-[48px] w-full"
+                className="h-12 w-full text-base font-semibold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "등록 중…" : "Sign Up"}
@@ -134,15 +134,15 @@ export default function SignupPage() {
                 </p>
               )}
             </form>
-            <p className="mt-4 text-center text-sm text-slate-500">
+            <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-500">
               이미 계정이 있으신가요?{" "}
               <Link
                 href="/login"
-                className="font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline decoration-2 underline-offset-2"
               >
                 Sign In
               </Link>
-            </p>
+            </div>
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-500">

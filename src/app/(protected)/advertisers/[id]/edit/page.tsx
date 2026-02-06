@@ -58,25 +58,25 @@ export default function EditAdvertiserPage({ params }: EditAdvertiserPageProps) 
   }
 
   return (
-    <div className="container py-8">
-      <header className="mb-6">
-        <Button asChild variant="ghost" size="sm" className="mb-4 gap-1">
+    <div className="container py-8 max-w-2xl">
+      <header className="mb-8">
+        <Button asChild variant="ghost" size="sm" className="mb-4 gap-1 text-slate-500 hover:text-slate-900 -ml-2">
           <Link href="/advertisers">
             <ArrowLeft className="h-4 w-4" />
             목록으로
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">광고주 수정</h1>
-        <p className="mt-1 text-secondary-500">
-          {advertiser.name} 정보를 수정합니다.
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">광고주 수정</h1>
+        <p className="mt-1 text-slate-500">
+          <span className="font-semibold text-indigo-600">{advertiser.name}</span> 정보를 수정합니다.
         </p>
       </header>
 
-      <Card className="border-secondary-200">
-        <CardHeader>
-          <h2 className="text-lg font-semibold">광고주 정보</h2>
+      <Card className="border-white bg-white/50 shadow-xl shadow-slate-200/40 backdrop-blur-sm">
+        <CardHeader className="border-b border-slate-100 bg-white/50 pb-4">
+          <h2 className="text-lg font-bold text-slate-800">광고주 정보</h2>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <AdvertiserForm
             defaultValues={advertiser}
             onSubmit={handleSubmit}

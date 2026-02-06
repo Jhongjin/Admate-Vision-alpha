@@ -10,11 +10,13 @@
   width: 100%;
   padding-inline: 1rem;
   max-width: 100%;
-  @media (width >= 420px) {
+
+  @media (width >=420px) {
     padding-inline: 1.25rem;
     max-width: 420px;
   }
-  @media (width >= 1400px) {
+
+  @media (width >=1400px) {
     max-width: 1400px;
     padding-inline: 2rem;
   }
@@ -128,16 +130,41 @@
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
   }
+
   @keyframes accordion-up {
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0;
+    }
+  }
+
+  --animate-scanner-line: scanner-line 3s ease-in-out infinite;
+
+  @keyframes scanner-line {
+    0% {
+      top: 0%;
+      opacity: 0;
+    }
+
+    10% {
+      opacity: 1;
+    }
+
+    90% {
+      opacity: 1;
+    }
+
+    100% {
+      top: 100%;
+      opacity: 0;
     }
   }
 }
@@ -155,18 +182,22 @@
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
 }
+
 @utility safe-area-padding-bottom {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
+
 @utility scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
 
 @layer base {
+
   *,
   ::after,
   ::before,
@@ -179,21 +210,22 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
+    --foreground: 222 47% 11%;
+    /* Slate-900 */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
-    /* design-tokens.md primary-500 #6366f1 */
+    --popover-foreground: 222 47% 11%;
+    /* Primary: Indigo-500 #6366f1 (239 84% 67%) */
     --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
-    /* design-tokens.md secondary-100/500 */
+    /* Secondary: Slate-100/Slate-900 */
     --secondary: 210 40% 96%;
     --secondary-foreground: 215 25% 27%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    /* design-tokens.md accent-500 #06b6d4 */
-    --accent: 187 94% 43%;
+    /* Accent: Cyan-500 #06b6d4 (189 94% 43%) */
+    --accent: 189 94% 43%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -202,34 +234,36 @@
     --ring: 239 84% 67%;
     --radius: 0.5rem;
     --chart-1: 239 84% 67%;
-    --chart-2: 187 94% 43%;
+    --chart-2: 189 94% 43%;
     --chart-3: 215 25% 27%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --background: 240 10% 4%;
+    --background: 222 47% 11%;
+    /* Slate-900 */
     --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
+    --card: 222 47% 10%;
+    /* Darker slate */
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 6%;
+    --popover: 222 47% 10%;
     --popover-foreground: 0 0% 98%;
     --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 16%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 187 94% 43%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 189 94% 43%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
     --ring: 239 84% 67%;
     --chart-1: 239 84% 67%;
-    --chart-2: 187 94% 43%;
+    --chart-2: 189 94% 43%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
@@ -240,6 +274,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground font-sans;
   }

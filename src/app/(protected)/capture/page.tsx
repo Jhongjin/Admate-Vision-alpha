@@ -159,7 +159,7 @@ export default function CapturePage() {
     video.srcObject = streamRef.current;
     video.setAttribute("playsinline", "true");
     video.muted = true;
-    video.play().catch(() => {});
+    video.play().catch(() => { });
   }, [status]);
 
   useEffect(() => {
@@ -264,9 +264,9 @@ export default function CapturePage() {
     const data: CaptureSessionData = {
       ...(locationImage
         ? {
-            locationImage,
-            locationCapturedAt: new Date().toISOString(),
-          }
+          locationImage,
+          locationCapturedAt: new Date().toISOString(),
+        }
         : { skipLocation: true }),
       adImages: [...adImages],
       lat: isCachedFresh ? cached!.lat : undefined,
@@ -296,28 +296,28 @@ export default function CapturePage() {
   }, [canFinish, locationImage, adImages, router, toast]);
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col bg-slate-50">
       <div className="container py-4">
-        <h1 className="text-xl font-semibold text-gray-900">광고 촬영</h1>
-        <p className="mt-1 text-sm text-secondary-500">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">광고 촬영</h1>
+        <p className="mt-1 text-sm text-slate-500">
           먼저 지하철 역명판을 촬영한 뒤, 광고 배너를 다양한 각도로 촬영해 주세요 (최대 10장).
         </p>
         {status === "ready" && (locationImage != null || skipLocation) && (
-          <p className="mt-2 text-xs text-primary-600 font-medium">
+          <p className="mt-2 text-sm font-semibold text-indigo-600">
             {skipLocation ? "위치 없음 · " : "위치 1장 · "}광고 {adImages.length}장
           </p>
         )}
         {advertisersLoading && (
-          <p className="mt-1 text-xs text-secondary-500">광고주 목록 불러오는 중…</p>
+          <p className="mt-1 text-xs text-slate-400">광고주 목록 불러오는 중…</p>
         )}
         {advertisersError && !advertisersLoading && (
-          <p className="mt-1 text-xs text-amber-700">
+          <p className="mt-1 text-xs text-amber-600">
             광고주 목록을 불러오지 못했습니다. 매칭이 제한될 수 있습니다.
           </p>
         )}
         {status === "ready" && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-secondary-500">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
             {gpsStatus === "loading" && "위치 수집 중..."}
             {gpsStatus === "ready" && "위치 준비됨"}
             {gpsStatus === "error" && "위치 사용 불가 (권한 또는 오류)"}
@@ -326,61 +326,69 @@ export default function CapturePage() {
         )}
       </div>
 
-      <div className="relative flex-1 min-h-[240px] bg-gray-900">
+      <div className="relative flex-1 min-h-[240px] bg-slate-950 overflow-hidden shadow-inner">
         {status === "loading" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white">
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-400">
             카메라 연결 중...
           </div>
         )}
         {status === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-900 p-4 text-center text-white">
-            <AlertCircle className="h-10 w-10 text-destructive" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 p-4 text-center text-slate-300">
+            <AlertCircle className="h-10 w-10 text-red-500" />
             <p className="text-sm">{errorMessage}</p>
             <Button
               variant="outline"
               size="sm"
               onClick={startCamera}
-              className="border-white bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900"
+              className="border-slate-700 bg-slate-800 text-white hover:bg-slate-700 hover:text-white"
             >
               다시 시도
             </Button>
           </div>
         )}
         {status === "ready" && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-          />
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="h-full w-full object-cover"
+            />
+            {/* AI Scanner Effect */}
+            <div className="absolute inset-0 z-10 pointer-events-none opacity-60">
+              <div className="w-full h-[50%] bg-gradient-to-b from-transparent via-cyan-500/20 to-cyan-500/50 absolute top-0 animate-scanner-line" />
+            </div>
+            {/* Grid overlay for tech feel */}
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+          </>
         )}
         {status === "idle" && !errorMessage && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-secondary-400">
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-500">
             카메라를 불러오는 중...
           </div>
         )}
       </div>
 
-      <div className="border-t border-secondary-200 bg-white px-4 py-3 flex flex-col gap-2 w-full">
-        <div className="flex flex-col gap-2 w-full">
+      <div className="border-t border-slate-200 bg-white px-4 py-4 flex flex-col gap-3 w-full safe-area-padding-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+        <div className="flex flex-col gap-3 w-full">
           {status === "ready" && (
             <>
               {locationImage == null && !skipLocation && (
                 <>
                   <Button
                     size="lg"
-                    className="gap-2 w-full"
+                    className="gap-2 w-full h-14 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all"
                     disabled={isCapturing}
                     onClick={handleCapture}
                   >
-                    <Camera className="h-5 w-5" />
+                    <Camera className="h-6 w-6" />
                     {isCapturing ? "촬영 중..." : "위치(역명) 촬영"}
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
-                    className="gap-2 w-full"
+                    className="gap-2 w-full h-12 text-slate-600 border-slate-200 hover:bg-slate-50 active:scale-[0.98] transition-all"
                     onClick={handleSkipLocation}
                   >
                     <MapPinOff className="h-5 w-5" />
@@ -395,7 +403,7 @@ export default function CapturePage() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="gap-1.5 w-full text-secondary-500 hover:text-secondary-700"
+                      className="gap-1.5 w-full text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                       onClick={() => setSkipLocation(false)}
                     >
                       <MapPin className="h-4 w-4" />
@@ -404,11 +412,11 @@ export default function CapturePage() {
                   )}
                   <Button
                     size="lg"
-                    className="gap-2 w-full"
+                    className="gap-2 w-full h-14 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
                     disabled={isCapturing || adImages.length >= AD_MAX}
                     onClick={handleCapture}
                   >
-                    <Camera className="h-5 w-5" />
+                    <Camera className="h-6 w-6" />
                     {isCapturing
                       ? (isAdMode ? "OCR 인식 중..." : "촬영 중...")
                       : `광고 촬영 (${adImages.length}/${AD_MAX})`}
@@ -416,7 +424,7 @@ export default function CapturePage() {
                   {canFinish && (
                     <Button
                       size="lg"
-                      className="gap-2 w-full bg-gray-800 text-white hover:bg-gray-700"
+                      className="gap-2 w-full h-12 bg-slate-900 text-white hover:bg-slate-800 shadow-md active:scale-[0.98] transition-all"
                       onClick={saveSessionAndGoToConfirm}
                     >
                       <FileText className="h-5 w-5" />
@@ -431,7 +439,7 @@ export default function CapturePage() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+              className="w-full h-12 border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
               onClick={startCamera}
             >
               카메라 다시 켜기
@@ -442,14 +450,14 @@ export default function CapturePage() {
           <Button
             size="lg"
             variant="outline"
-            className="gap-2 w-full"
+            className="gap-2 w-full h-12 border-slate-200 text-slate-600 hover:bg-slate-50"
             onClick={saveSessionAndGoToConfirm}
           >
             <FileText className="h-5 w-5" />
             보고서 작성하기
           </Button>
         ) : (
-          <Button asChild variant="outline" size="lg" className="gap-2 w-full">
+          <Button asChild variant="outline" size="lg" className="gap-2 w-full h-12 border-slate-200 text-slate-600 hover:bg-slate-50">
             <Link href="/reports">
               <FileText className="h-5 w-5" />
               보고서 작성하기

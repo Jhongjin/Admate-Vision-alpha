@@ -1,0 +1,24 @@
+{
+  "advertiserName": "테스트광고주",
+  "station": "여의도",
+  "line": "5호선",
+  "displayDays": 7,
+  "exposure": {
+    "totalExposure": 270000,
+    "dailyFlow": 90000,
+    "displayDays": 7,
+    "byTimeBand": [
+      { "band": "07-09", "exposure": 68000 },
+      { "band": "09-12", "exposure": 54000 },
+      { "band": "12-14", "exposure": 40000 },
+      { "band": "14-17", "exposure": 40000 },
+      { "band": "17-20", "exposure": 54000 },
+      { "band": "20-23", "exposure": 14000 }
+    ]
+  },
+  "imageBase64s": [],
+  "subtitle": "",
+  "dateStr": "20260206",
+  "campaignManagerName": "홍길동",
+  "campaignManagerEmail": "campaign@example.com"
+}

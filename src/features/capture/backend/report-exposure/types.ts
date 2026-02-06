@@ -60,4 +60,8 @@ export type ReportPptParams = {
   subtitle?: string;
   /** 보고 일자 (yyyyMMdd) */
   dateStr?: string;
+  /** 캠페인 담당자 이름 (문서 끝 슬라이드) */
+  campaignManagerName?: string;
+  /** 캠페인 담당자 이메일 (문서 끝 슬라이드) */
+  campaignManagerEmail?: string;
 };

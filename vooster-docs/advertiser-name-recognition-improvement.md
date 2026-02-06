@@ -95,11 +95,26 @@
 - **조치**: `src/features/capture/lib/station-from-ocr.ts`에 **역명으로 쓰이면 안 되는 문구 블록리스트** 추가. 해당 문구가 추출되면 `stationName`을 null로 반환해 "역명 미인식"으로 표시.
 - **추가**: 역번호(예: 529) **바로 뒤**에 나오는 한글을 역명 후보로 우선 사용해, 역명판 형식("529 공덕")에서 더 안정적으로 역명 추출.
 
+### 6.1 존재하지 않는 역명 필터 (도시 등)
+
+- **현상**: OCR이 "도시", "신한" 등 실제 없는 역명을 추출하면 PPT·공공데이터에 잘못된 유동인구가 붙는 문제.
+- **조치**:
+  - **화이트리스트**: `src/features/capture/lib/station-whitelist.ts`에 서울 지하철 1~9호선 실제 역명 집합을 두고, 추출된 역명이 이 목록에 있을 때만 `stationName`으로 인정. 없으면 "역명 미인식".
+  - **블록리스트 보강**: "도시", "신한"을 `INVALID_STATION_PHRASES`에 추가.
+  - **공공데이터 정합성**: `fetchStationFlow` 호출 전에 `isKnownStationName(station)` 검사. 역명이 화이트리스트에 없으면 유동인구를 조회·첨부하지 않고 `{ ok: false, error: "INVALID_STATION" }` 반환.
+
+### 6.2 역명 OCR 개선 (가장 큰 글자 우선)
+
+- **조치**: Google Cloud Vision API의 `textAnnotations`(단어별 바운딩 박스)를 이용해, **바운딩 면적이 큰 텍스트 순**으로 나열한 `textForStation`을 서버 OCR 응답에 포함. 촬영 확인 페이지에서는 위치(역명) 사진 OCR 시 `textForStation ?? text`를 `parseStationFromOcr`에 넘겨, 역명판에서 가장 크게 쓰인 역명이 우선 추출되도록 함.
+- **파일**: `src/features/capture/backend/ocr-service.ts`, `route.ts`(textForStation 반환), `confirm/page.tsx`(위치 OCR 시 textForStation 사용).
+
 ---
 
 ## 7. 관련 파일
 
-- `src/features/capture/lib/station-from-ocr.ts` — 역명·호선 추출, 역명 오인식 블록리스트
+- `src/features/capture/lib/station-whitelist.ts` — 실제 서울 지하철 역명 화이트리스트
+- `src/features/capture/lib/station-from-ocr.ts` — 역명·호선 추출, 역명 오인식 블록리스트·화이트리스트 검증
+- `src/features/capture/backend/report-exposure/public-data-service.ts` — 유동인구 조회 전 역명 검증
 - `src/features/capture/lib/match-advertiser.ts` — 매칭·유사도 로직
 - `src/features/advertisers/backend/service.ts` — `rowToResponse`에서 search_terms 비었을 때 이름 fallback
 - `vooster-docs/ocr-advertiser-matching-tech-review.md` — OCR–광고주 매칭 기술 검토
