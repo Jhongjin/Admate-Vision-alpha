@@ -123,22 +123,7 @@ export default function CaptureConfirmPage() {
   const advertisers = advertisersData ?? [];
   const { profile } = useUserProfile();
 
-  // Helper: URL to Base64
-  const urlToBase64 = async (url: string) => {
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (e) {
-      console.error("Image fetch failed", e);
-      return "";
-    }
-  };
+  /* urlToBase64 removed */
 
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
@@ -154,13 +139,13 @@ export default function CaptureConfirmPage() {
         })
         .then(async (report) => {
           const imageUrls: string[] = report.image_urls || [];
-          const adImages = await Promise.all(imageUrls.map(async (url) => ({
-            imageDataUrl: await urlToBase64(url),
+          const adImages = imageUrls.map((url) => ({
+            imageDataUrl: url,
             capturedAt: report.created_at
-          })));
+          }));
 
           const sessionData: CaptureSessionData = {
-            adImages: adImages.filter(img => img.imageDataUrl),
+            adImages: adImages,
             locationImage: undefined, // Location image not currently stored separately as URL in many cases, or implies mixed in images? 
             // NOTE: DB doesn't distinguish location image clearly if not saved separately. Assuming adImages only for now.
             // If location image was saved, it might be in image_urls[0] or similar, but logic is tricky.
