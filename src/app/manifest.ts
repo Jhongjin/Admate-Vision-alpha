@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
-        theme_color: "#4f46e5",
+        theme_color: "#0f172a",
         icons: [
             {
                 src: "/favicon.ico",
@@ -21,7 +21,7 @@ export default function manifest(): MetadataRoute.Manifest {
                 type: "image/png",
             },
             {
-                src: "/apple-icon?v=1",
+                src: "/apple-icon?v=2", // version bump to bust cache
                 sizes: "180x180",
                 type: "image/png",
             },
