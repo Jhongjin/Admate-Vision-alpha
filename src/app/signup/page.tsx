@@ -11,6 +11,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { BRAND } from "@/constants/brand";
 import { signupApi, extractApiErrorMessage } from "@/features/auth/api";
+import { setRegisteredEmail } from "@/lib/registered-email";
 import { useToast } from "@/hooks/use-toast";
 
 const SIGNUP_EMAIL_DOMAIN = "@nasmedia.co.kr";
@@ -47,15 +48,13 @@ export default function SignupPage() {
       setIsSubmitting(true);
       setDuplicateEmailMessage(null);
       try {
-        await signupApi({
+        const user = await signupApi({
           name: formState.name.trim(),
           email: fullEmail,
         });
-        toast({
-          title: "가입 완료",
-          description: `${fullEmail} 주소로 인증 메일을 보냈습니다. 메일의 링크를 클릭한 뒤 로그인해 주세요.`,
-        });
-        router.replace("/login");
+        setRegisteredEmail(user.email);
+        toast({ title: "가입 완료", description: `${user.name}님, 환영합니다.` });
+        router.replace("/capture");
       } catch (err) {
         const isDuplicate =
           isAxiosError(err) && err.response?.status === 409;
@@ -86,7 +85,7 @@ export default function SignupPage() {
               Sign Up
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              이름과 아이디를 입력하면 가입 이메일로 인증 메일이 발송됩니다.
+              이름과 아이디를 입력하면 즉시 가입·로그인됩니다.
             </p>
           </div>
 

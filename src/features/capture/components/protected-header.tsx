@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Camera, LayoutDashboard, FileText, Users, LogOut } from "lucide-react";
+import { Camera, LayoutDashboard, FileText, Users, UserCircle, LogOut } from "lucide-react";
 import { BRAND } from "@/constants/brand";
 import { useRegisteredEmail } from "@/features/auth/hooks/useRegisteredEmail";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/capture", label: "촬영", icon: Camera },
   { href: "/advertisers", label: "광고주", icon: Users },
   { href: "/reports", label: "보고", icon: FileText },
+  { href: "/account", label: "계정", icon: UserCircle },
 ] as const;
 
 export function ProtectedHeader() {

@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   failure,
@@ -19,10 +18,8 @@ import {
   authErrorCodes,
   type AuthServiceError,
 } from '@/features/auth/backend/error';
-import { sendVerificationEmail } from '@/features/auth/backend/send-verification-email';
 
 const TABLE = 'users';
-const VERIFICATION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24시간
 
 function rowToResponse(row: UserRow): UserResponse {
   return {
@@ -65,17 +62,12 @@ export async function signup(
     );
   }
 
-  const token = randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_MS).toISOString();
-
   const { data, error } = await client
     .from(TABLE)
     .insert({
       name: trimmedName,
       email: trimmedEmail,
-      email_verified: false,
-      email_verification_token: token,
-      email_verification_expires_at: expiresAt,
+      email_verified: true,
     })
     .select()
     .single<UserRow>();
@@ -91,21 +83,6 @@ export async function signup(
       authErrorCodes.validationError,
       '저장 결과 검증 실패.',
       rowParse.error.format()
-    );
-  }
-
-  const sendResult = await sendVerificationEmail({
-    to: trimmedEmail,
-    token,
-    name: trimmedName,
-  });
-
-  if (!sendResult.ok) {
-    const detail = sendResult.error ?? '알 수 없는 오류';
-    return failure(
-      503,
-      authErrorCodes.serviceUnavailable,
-      `회원가입은 완료되었으나 인증 메일 발송에 실패했습니다. (${detail}) 잠시 후 다시 시도하거나 RESEND_API_KEY·도메인 인증을 확인해 주세요.`
     );
   }
 
@@ -266,4 +243,43 @@ export async function verifyEmail(
   }
 
   return success({ email: data.email });
+}
+
+export async function withdrawByEmail(
+  client: SupabaseClient,
+  email: string
+): Promise<HandlerResult<{ ok: true }, AuthServiceError, unknown>> {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) {
+    return failure(
+      400,
+      authErrorCodes.validationError,
+      '이메일이 필요합니다.'
+    );
+  }
+
+  const { data: existing } = await client
+    .from(TABLE)
+    .select('id')
+    .eq('email', trimmed)
+    .maybeSingle();
+
+  if (!existing) {
+    return failure(
+      404,
+      authErrorCodes.notFound,
+      '등록된 이메일이 없습니다.'
+    );
+  }
+
+  const { error } = await client
+    .from(TABLE)
+    .delete()
+    .eq('id', existing.id);
+
+  if (error) {
+    return failure(500, authErrorCodes.createError, error.message);
+  }
+
+  return success({ ok: true });
 }

@@ -56,3 +56,9 @@ export const UserResponseSchema = z.object({
 });
 
 export type UserResponse = z.infer<typeof UserResponseSchema>;
+
+export const WithdrawBodySchema = z.object({
+  email: emailSchema,
+});
+
+export type WithdrawBody = z.infer<typeof WithdrawBodySchema>;

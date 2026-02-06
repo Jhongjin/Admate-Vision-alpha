@@ -11,8 +11,9 @@ import {
   LoginBodySchema,
   MeQuerySchema,
   VerifyEmailQuerySchema,
+  WithdrawBodySchema,
 } from '@/features/auth/backend/schema';
-import { signup, login, getMeByEmail, verifyEmail } from '@/features/auth/backend/service';
+import { signup, login, getMeByEmail, verifyEmail, withdrawByEmail } from '@/features/auth/backend/service';
 import {
   authErrorCodes,
   type AuthServiceError,
@@ -49,7 +50,7 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
       getLogger(c).error('Auth signup failed', err.error.message);
       return respond(c, result);
     }
-    getLogger(c).info('Auth signup success; verification email sent to', parsed.data.email);
+    getLogger(c).info('Auth signup success', parsed.data.email);
     return respond(c, result);
   });
 
@@ -130,5 +131,35 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
       return c.redirect('/login?error=verification_failed', 302);
     }
     return c.redirect('/login?verified=1', 302);
+  });
+
+  app.post('/auth/withdraw', async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = WithdrawBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return respond(
+        c,
+        failure(
+          400,
+          authErrorCodes.validationError,
+          '이메일을 입력해 주세요.',
+          parsed.error.format()
+        )
+      );
+    }
+    if (isSupabasePlaceholder(getConfig(c))) {
+      return respond(
+        c,
+        failure(503, authErrorCodes.serviceUnavailable, SERVICE_UNAVAILABLE_MESSAGE)
+      );
+    }
+    const supabase = getSupabase(c);
+    const result = await withdrawByEmail(supabase, parsed.data.email);
+    if (!result.ok) {
+      const err = result as ErrorResult<AuthServiceError, unknown>;
+      getLogger(c).warn('Auth withdraw failed', err.error.message);
+      return respond(c, result);
+    }
+    return respond(c, result);
   });
 };
