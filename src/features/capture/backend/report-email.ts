@@ -77,13 +77,22 @@ export function buildReportBody(params: ReportEmailParams): string {
   const { senderNameOption, loginUserName, campaignManagerName, campaignManagerEmail, reportUrl } = params;
   const senderName =
     senderNameOption === "user" ? loginUserName || "나스미디어" : campaignManagerName;
-  let body = `안녕하세요. 나스미디어 ${senderName} 입니다. 게첨 보고서 전달 드립니다.
+  let body = `안녕하세요.
 
-해당 메일은 발신전용으로 관련사항에 대한 문의는 ${campaignManagerName} (${campaignManagerEmail}) 로 회신 부탁 드립니다.`;
+나스미디어 ${senderName} 입니다. 게첨 보고서 전달 드립니다.
+해당 메일은 발신전용으로 관련사항에 대한 문의는 ${campaignManagerName} (${campaignManagerEmail}) 로 회신 부탁 드립니다.
+`;
 
   if (reportUrl) {
-    body += `\n\n[AI 성과 분석 리포트 확인하기]\n${reportUrl}`;
+    body += `
+[AI 성과 분석 리포트 확인하기]
+${reportUrl}
+`;
   }
+
+  body += `
+감사합니다.
+${senderName} 드림`;
 
   return body;
 }
@@ -110,34 +119,36 @@ export function buildReportHtml(params: ReportEmailParams): string {
     ? `${escapeHtml(campaignManagerName)} <span style="font-size:14px;font-weight:normal;color:#333;">${escapeHtml(campaignManagerNameEn)}</span>`
     : escapeHtml(campaignManagerName);
 
+  const footerWidth = "65%";
   const footerHtml = `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;margin-bottom:0;">
   <tr>
-    <td style="padding:0 0 16px 0;font-size:16px;font-weight:bold;color:#111;">${nameDisplay}</td>
-  </tr>
-  <tr>
-    <td style="padding:24px 0 0 0;border-top:1px solid #e5e7eb;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;border-radius:6px;padding:16px 20px;">
+    <td style="width:${footerWidth};max-width:480px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #e5e7eb;">
         <tr>
-          <td style="padding:0 0 12px 0;font-size:13px;font-weight:bold;color:#374151;">Media Archive</td>
+          <td style="padding:16px 0 0 0;font-size:16px;font-weight:bold;color:#111;">${nameDisplay}</td>
         </tr>
         <tr>
-          <td style="padding:0 0 4px 0;font-size:12px;color:#6b7280;">온모바일 | IPTV | OOH | 모바일광고플랫폼</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0 16px 0;">
-            <a href="${MEDIA_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:12px 0 4px 0;font-size:13px;font-weight:bold;color:#374151;">Trend Archive</td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 4px 0;font-size:12px;color:#6b7280;">마케터라면 알아야 할 디지털 트렌드와 이슈</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0 0 0;">
-            <a href="${TREND_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+          <td style="padding:16px 0 0 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;border-radius:6px;padding:16px 20px;">
+              <tr>
+                <td style="font-size:13px;font-weight:bold;color:#374151;">Media Archive</td>
+                <td style="font-size:12px;color:#6b7280;padding:0 8px;">온모바일 | IPTV | OOH | 모바일광고플랫폼</td>
+                <td align="right" style="white-space:nowrap;">
+                  <a href="${MEDIA_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="3" style="height:12px;"></td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;font-weight:bold;color:#374151;">Trend Archive</td>
+                <td style="font-size:12px;color:#6b7280;padding:0 8px;">마케터라면 알아야 할 디지털 트렌드와 이슈</td>
+                <td align="right" style="white-space:nowrap;">
+                  <a href="${TREND_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
