@@ -124,13 +124,13 @@ export function buildReportHtml(params: ReportEmailParams): string {
   const logoImg = `<img src="${KT_NASMEDIA_LOGO_URL}" alt="kt nasmedia" width="120" height="28" style="display:block;max-height:28px;width:auto;" />`;
   const logoLink = `<a href="${KT_NASMEDIA_LINK}" target="_blank" rel="noopener" style="text-decoration:none;">${logoImg}</a>`;
 
-  const footerWidth = "52%";
-  const footerMaxWidth = "360px";
+  /** 이메일 푸터 고정 너비 (일반 메일 폼 표준 600px) */
+  const FOOTER_WIDTH_PX = 600;
   const footerHtml = `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;margin-bottom:0;">
   <tr>
-    <td style="width:${footerWidth};max-width:${footerMaxWidth};">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #1a1a1a;">
+    <td style="width:${FOOTER_WIDTH_PX}px;max-width:${FOOTER_WIDTH_PX}px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #1a1a1a;width:${FOOTER_WIDTH_PX}px;max-width:${FOOTER_WIDTH_PX}px;">
         <tr>
           <td style="padding:12px 0 0 0;font-size:15px;font-weight:bold;color:#111;vertical-align:top;">${nameDisplay}</td>
           <td align="right" style="padding:12px 0 0 0;vertical-align:top;">${logoLink}</td>
@@ -164,10 +164,14 @@ export function buildReportHtml(params: ReportEmailParams): string {
 </table>`;
 
   return `
-<div style="font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif;font-size:14px;line-height:1.6;color:#333;">
-${bodyHtml}
-${footerHtml}
-</div>`;
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif;font-size:14px;line-height:1.6;color:#333;">
+  <tr>
+    <td style="max-width:${FOOTER_WIDTH_PX}px;">
+      <div style="max-width:${FOOTER_WIDTH_PX}px;">${bodyHtml}</div>
+      ${footerHtml}
+    </td>
+  </tr>
+</table>`;
 }
 
 export async function sendReportEmail(params: ReportEmailParams): Promise<{ ok: boolean; error?: string }> {
