@@ -25,7 +25,7 @@ export function PublicHeader() {
       <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/"
-          className="min-h-[44px] min-w-[44px] shrink-0 text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600 flex items-center"
+          className="min-h-[44px] min-w-[44px] shrink-0 text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600 flex items-center whitespace-nowrap"
         >
           {BRAND.name}
         </Link>
@@ -35,7 +35,7 @@ export function PublicHeader() {
               <Button asChild size="sm" className="min-h-[44px] px-4 font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm border border-transparent">
                 <Link href="/dashboard">대시보드</Link>
               </Button>
-              <div className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+              <div className="hidden md:flex items-center gap-1.5 text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
                 <User className="h-3.5 w-3.5 text-slate-400" />
                 <span>{profile?.name ?? email?.split("@")[0]}</span>
               </div>
