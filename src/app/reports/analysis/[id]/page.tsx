@@ -6,10 +6,10 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, RotateCw, AlertCircle, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ReportAnalysisView, type ReportDataWithAnalysis } from "../report-analysis-view";
+import { ReportAnalysisView, type ReportDataWithAnalysis } from "@/app/(protected)/reports/analysis/report-analysis-view";
 
 type ReportData = Omit<ReportDataWithAnalysis, "ai_analysis"> & {
-  ai_analysis: ReportDataWithAnalysis["ai_analysis"] | null;
+    ai_analysis: ReportDataWithAnalysis["ai_analysis"] | null;
 };
 
 export default function AnalysisReportPage() {
