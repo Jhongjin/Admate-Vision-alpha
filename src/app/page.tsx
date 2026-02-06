@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { BRAND } from "@/constants/brand";
-import { getRegisteredEmail } from "@/lib/registered-email";
 
 const features = [
   {
@@ -39,10 +38,7 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
 
-  useEffect(() => {
-    const stored = getRegisteredEmail();
-    if (stored) router.replace("/capture");
-  }, [router]);
+  /* Auto-redirect removed as per user request to allow viewing landing page */
 
   const toggleMute = () => {
     if (!videoRef.current) return;
