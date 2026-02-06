@@ -258,7 +258,6 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       // 4. 이미지 스토리지 업로드 및 URL 업데이트
       let imageUrls: string[] = [];
       try {
-        // 이미 위에서 추출한 imageBase64s 사용
         if (imageBase64s.length > 0) {
           // Ensure bucket exists and is public
           await supabase.storage.createBucket("report-images", { public: true })
@@ -266,9 +265,12 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
             .catch((e) => console.warn("Bucket setup warning:", e));
 
           const uploadPromises = imageBase64s.map(async (base64, index) => {
-            // base64 is data URI, extract actual base64
-            const rawBase64 = base64.split(",")[1];
-            if (!rawBase64) return null;
+            // base64 might be data URI or raw base64
+            const rawBase64 = base64.includes(",") ? base64.split(",")[1] : base64;
+            if (!rawBase64) {
+              console.warn(`[capture/report] Empty base64 for image ${index}`);
+              return null;
+            }
 
             const buffer = Buffer.from(rawBase64, "base64");
             // 파일명: {reportId}/{index}.jpg
