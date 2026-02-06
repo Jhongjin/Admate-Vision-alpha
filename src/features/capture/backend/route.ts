@@ -101,22 +101,23 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
 
   /** 보고 발송 (Resend 이메일 + ZIP 첨부) */
   app.post("/capture/report", async (c) => {
-    const body = await c.req.json().catch(() => ({}));
-    const parsed = ReportBodySchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: "INVALID_BODY", message: "Invalid report payload" }, 400);
-    }
-    const payload = parsed.data;
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const parsed = ReportBodySchema.safeParse(body);
+      if (!parsed.success) {
+        return c.json({ ok: false, error: "INVALID_BODY", message: "Invalid report payload" }, 400);
+      }
+      const payload = parsed.data;
 
-    if (!payload.advertiserId) {
-      return c.json({
-        ok: false,
-        error: "ADVERTISER_REQUIRED",
-        message: "광고주 정보가 없어 이메일 발송을 할 수 없습니다. 광고주가 인식된 촬영만 보고 발송할 수 있습니다.",
-      }, 400);
-    }
+      if (!payload.advertiserId) {
+        return c.json({
+          ok: false,
+          error: "ADVERTISER_REQUIRED",
+          message: "광고주 정보가 없어 이메일 발송을 할 수 없습니다. 광고주가 인식된 촬영만 보고 발송할 수 있습니다.",
+        }, 400);
+      }
 
-    const supabase = getSupabase(c);
+      const supabase = getSupabase(c);
     const advResult = await getAdvertiserById(supabase, payload.advertiserId);
     if (!advResult.ok) {
       return c.json({
@@ -260,6 +261,11 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       message: "보고 메일이 발송되었습니다.",
       savedToHistory: true,
     });
+    } catch (err) {
+      console.error("[capture/report] Unhandled error:", err);
+      const message = err instanceof Error ? err.message : "서버 오류가 발생했습니다.";
+      return c.json({ ok: false, error: "INTERNAL_ERROR", message }, 500);
+    }
   });
 
   /** AI 성과 분석 웹 미리보기용 (로컬/형태 확인) — Gemini 호출 후 리포트와 동일한 형태로 반환 */

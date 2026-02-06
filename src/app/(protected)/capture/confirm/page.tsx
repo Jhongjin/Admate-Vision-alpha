@@ -536,6 +536,7 @@ export default function CaptureConfirmPage() {
       return;
     }
     setReportSending(true);
+    toast({ title: "보고 발송 중", description: "요청을 처리하고 있습니다." });
     try {
       let zipBase64: string | undefined;
       let zipFilename: string | undefined;
@@ -590,14 +591,9 @@ export default function CaptureConfirmPage() {
       } finally {
         clearTimeout(timeoutId);
       }
-      let json: { ok?: boolean; message?: string; error?: string; savedToHistory?: boolean };
+      let json: { ok?: boolean; message?: string; error?: string | { code?: string; message?: string }; savedToHistory?: boolean };
       try {
-        json = (await res.json()) as {
-          ok?: boolean;
-          message?: string;
-          error?: string;
-          savedToHistory?: boolean;
-        };
+        json = (await res.json()) as typeof json;
       } catch {
         toast({
           title: "발송 실패",
@@ -606,6 +602,14 @@ export default function CaptureConfirmPage() {
         });
         return;
       }
+      const errorMessage =
+        typeof json.message === "string"
+          ? json.message
+          : typeof json.error === "object" && json.error && "message" in json.error
+            ? String((json.error as { message?: string }).message ?? "오류가 발생했습니다.")
+            : typeof json.error === "string"
+              ? json.error
+              : "이메일 발송에 실패했습니다.";
       if (res.ok && json.ok) {
         const desc =
           json.savedToHistory === false
@@ -618,7 +622,7 @@ export default function CaptureConfirmPage() {
       } else {
         toast({
           title: "발송 실패",
-          description: json.message ?? json.error ?? "이메일 발송에 실패했습니다.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
@@ -629,7 +633,7 @@ export default function CaptureConfirmPage() {
         : e instanceof Error
           ? e.message
           : "발송 중 오류가 발생했습니다.";
-      toast({ title: "발송 실패", description: msg, variant: "destructive" });
+      toast({ title: "발송 실패", description: String(msg), variant: "destructive" });
     } finally {
       setReportSending(false);
     }
