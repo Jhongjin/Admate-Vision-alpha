@@ -298,10 +298,28 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
           imageUrls = results.filter((url): url is string => url !== null);
 
           if (imageUrls.length > 0) {
-            await supabase
+            // 1. Try updating standard column
+            const { error: updateErr } = await supabase
               .from("vision_ocr_reports")
               .update({ image_urls: imageUrls })
               .eq("id", insertedReport.id);
+
+            // 2. Fallback: If column update failed (e.g. migration missing), save to ai_analysis JSON
+            if (updateErr && aiAnalysisData) {
+              console.warn("[capture/report] image_urls column update failed, falling back to ai_analysis:", updateErr);
+              const fallbackData = {
+                ...aiAnalysisData,
+                image_urls: imageUrls,
+                debug_error: {
+                  message: "Column Update Failed",
+                  details: updateErr.message
+                }
+              };
+              await supabase
+                .from("vision_ocr_reports")
+                .update({ ai_analysis: fallbackData })
+                .eq("id", insertedReport.id);
+            }
           }
         }
       } catch (uploadOrUpdateErr: any) {

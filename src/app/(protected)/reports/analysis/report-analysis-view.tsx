@@ -324,37 +324,45 @@ export function ReportAnalysisView({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`grid gap-4 ${(!report.image_urls || report.image_urls.length <= 1) ? 'grid-cols-1' :
-                report.image_urls.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                  report.image_urls.length === 3 ? 'grid-cols-1 md:grid-cols-2' :
-                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-                }`}>
-                {(report.image_urls && report.image_urls.length > 0) ? (
-                  report.image_urls.map((url, idx) => (
-                    <div
-                      key={idx}
-                      className={`group relative aspect-video overflow-hidden rounded-lg bg-slate-100 border border-slate-200 ${report.image_urls!.length === 3 && idx === 0 ? 'md:row-span-2 md:h-full' : ''
-                        }`}
-                    >
-                      <img
-                        src={url}
-                        alt={`현장 촬영 이미지 ${idx + 1}`}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
-                        <p className="text-xs font-medium text-white flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {idx === 0 ? "메인 촬영" : `상세 이미지 ${idx}`}
-                        </p>
+              {(() => {
+                const displayImages = (report.image_urls && report.image_urls.length > 0)
+                  ? report.image_urls
+                  : (ai_analysis as any).image_urls as string[] | undefined;
+
+                return (
+                  <div className={`grid gap-4 ${(!displayImages || displayImages.length <= 1) ? 'grid-cols-1' :
+                    displayImages.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                      displayImages.length === 3 ? 'grid-cols-1 md:grid-cols-2' :
+                        'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                    }`}>
+                    {(displayImages && displayImages.length > 0) ? (
+                      displayImages.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className={`group relative aspect-video overflow-hidden rounded-lg bg-slate-100 border border-slate-200 ${displayImages.length === 3 && idx === 0 ? 'md:row-span-2 md:h-full' : ''
+                            }`}
+                        >
+                          <img
+                            src={url}
+                            alt={`현장 촬영 이미지 ${idx + 1}`}
+                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          />
+                          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
+                            <p className="text-xs font-medium text-white flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {idx === 0 ? "메인 촬영" : `상세 이미지 ${idx}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex h-40 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                        이미지가 없습니다.
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex h-40 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
-                    이미지가 없습니다.
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
               <p className="text-xs text-slate-400 mt-3 text-right">
                 * 상세 원본 이미지는 함께 송부된 첨부파일을 확인해 주세요.
               </p>
