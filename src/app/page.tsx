@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { LogIn, UserPlus, Volume2, VolumeX, Camera, BrainCircuit, FileText, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { BRAND } from "@/constants/brand";
+import { useRegisteredEmail } from "@/features/auth/hooks/useRegisteredEmail";
 
 const features = [
   {
@@ -34,7 +34,7 @@ const features = [
 ];
 
 export default function Home() {
-  const router = useRouter();
+  const { email } = useRegisteredEmail();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -117,18 +117,29 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg" className="h-12 w-full min-w-[160px] rounded-full bg-indigo-600 text-base font-semibold shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/40 sm:w-auto">
-                <Link href="/login">
-                  <LogIn className="mr-2 h-5 w-5" />
-                  시작하기
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 w-full min-w-[160px] rounded-full border-slate-200 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 sm:w-auto">
-                <Link href="/signup">
-                  <UserPlus className="mr-2 h-5 w-5" />
-                  회원가입
-                </Link>
-              </Button>
+              {email ? (
+                <Button asChild size="lg" className="h-12 w-full min-w-[200px] rounded-full bg-indigo-600 text-base font-semibold shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/40 sm:w-auto">
+                  <Link href="/capture">
+                    <Camera className="mr-2 h-5 w-5" />
+                    촬영하기
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button asChild size="lg" className="h-12 w-full min-w-[160px] rounded-full bg-indigo-600 text-base font-semibold shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-700 hover:shadow-indigo-500/40 sm:w-auto">
+                    <Link href="/login">
+                      <LogIn className="mr-2 h-5 w-5" />
+                      시작하기
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="h-12 w-full min-w-[160px] rounded-full border-slate-200 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 sm:w-auto">
+                    <Link href="/signup">
+                      <UserPlus className="mr-2 h-5 w-5" />
+                      회원가입
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -183,11 +194,19 @@ export default function Home() {
                 복잡한 절차 없이 이름과 이메일만으로 3초 만에 가입 가능합니다.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button asChild size="lg" className="h-14 w-full rounded-full bg-white text-lg font-bold text-indigo-900 hover:bg-indigo-50 sm:w-auto px-8">
-                  <Link href="/signup">
-                    무료로 시작하기 <ChevronRight className="ml-1 h-5 w-5" />
-                  </Link>
-                </Button>
+                {email ? (
+                  <Button asChild size="lg" className="h-14 w-full rounded-full bg-white text-lg font-bold text-indigo-900 hover:bg-indigo-50 sm:w-auto px-8">
+                    <Link href="/capture">
+                      촬영 시작하기 <ChevronRight className="ml-1 h-5 w-5" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild size="lg" className="h-14 w-full rounded-full bg-white text-lg font-bold text-indigo-900 hover:bg-indigo-50 sm:w-auto px-8">
+                    <Link href="/signup">
+                      무료로 시작하기 <ChevronRight className="ml-1 h-5 w-5" />
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

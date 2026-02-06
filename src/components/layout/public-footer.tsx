@@ -25,7 +25,7 @@ export function PublicFooter() {
             <p className="text-sm font-semibold text-slate-900">{BRAND.name}</p>
             <p className="mt-1 text-xs text-slate-500">{BRAND.visionTagline}</p>
           </div>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Product
@@ -58,6 +58,17 @@ export function PublicFooter() {
                     </Link>
                   </li>
                 ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Family Site
+              </p>
+              <ul className="mt-2 space-y-2">
+                <li><span className="block min-h-[44px] py-2 text-sm text-slate-400 cursor-not-allowed">AdMate Vision DA</span></li>
+                <li><span className="block min-h-[44px] py-2 text-sm text-slate-400 cursor-not-allowed">AdMate Guide</span></li>
+                <li><span className="block min-h-[44px] py-2 text-sm text-slate-400 cursor-not-allowed">AdMate Sentinel</span></li>
+                <li><span className="block min-h-[44px] py-2 text-sm text-slate-400 cursor-not-allowed">AdMate Media Planning</span></li>
               </ul>
             </div>
           </div>
