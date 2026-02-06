@@ -34,7 +34,7 @@ export async function extractImageBase64sFromZip(zipBase64: string): Promise<str
     if (!file?.dir) {
       const base64 = await file.async("base64");
       const mime = mimeFromFilename(name);
-      out.push(`${mime};base64,${base64}`);
+      out.push(`data:${mime};base64,${base64}`);
     }
   }
   return out;
