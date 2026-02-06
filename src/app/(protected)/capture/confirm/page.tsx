@@ -828,7 +828,7 @@ export default function CaptureConfirmPage() {
                     alt={`광고 ${i + 1}`}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-2 right-2 flex gap-1 transition-opacity">
                     <Button
                       type="button"
                       variant="secondary"
