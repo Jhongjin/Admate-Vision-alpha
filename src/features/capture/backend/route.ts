@@ -207,9 +207,9 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
           aiAnalysisData = null;
         }
       }
-      // Generate PDF (only if station/line provided)
+      // Generate PDF (only if station/line provided AND not skipped)
       let pdfAttachment: { filename: string; buffer: Buffer } | undefined;
-      if (payload.station && payload.line) {
+      if (payload.station && payload.line && !payload.skipAiAnalysis) {
         try {
           const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim();
           const safeLine = payload.line.replace(/[/\\:*?"<>|]/g, "_").trim();

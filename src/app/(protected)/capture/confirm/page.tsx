@@ -755,13 +755,23 @@ export default function CaptureConfirmPage() {
                     </p>
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
-                        <span className="block text-xs text-slate-500 mb-0.5">역명</span>
-                        <span className="font-bold text-slate-900 text-lg">{stationName ?? FALLBACK.station}</span>
+                      <div className="rounded-lg bg-slate-50 p-2 border border-slate-100 flex flex-col gap-1">
+                        <span className="block text-xs text-slate-500 ml-1">역명</span>
+                        <Input
+                          className="h-8 text-sm border-slate-200 bg-white focus-visible:ring-indigo-500"
+                          value={stationName ?? ""}
+                          onChange={(e) => setStationName(e.target.value)}
+                          placeholder={FALLBACK.station}
+                        />
                       </div>
-                      <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
-                        <span className="block text-xs text-slate-500 mb-0.5">호선</span>
-                        <span className="font-bold text-slate-900 text-lg">{subwayLine ?? FALLBACK.line}</span>
+                      <div className="rounded-lg bg-slate-50 p-2 border border-slate-100 flex flex-col gap-1">
+                        <span className="block text-xs text-slate-500 ml-1">호선</span>
+                        <Input
+                          className="h-8 text-sm border-slate-200 bg-white focus-visible:ring-indigo-500"
+                          value={subwayLine ?? ""}
+                          onChange={(e) => setSubwayLine(e.target.value)}
+                          placeholder={FALLBACK.line}
+                        />
                       </div>
                     </div>
                   )}
@@ -1130,7 +1140,17 @@ export default function CaptureConfirmPage() {
             onClick={() => void handleSendReport()}
           >
             <Send className="h-4 w-4" />
-            {reportSending ? "발송 중..." : "보고 발송하기"}
+            {reportSending ? "발송 중..." : "AI 보고서 보내기"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="gap-2 bg-slate-200 text-slate-700 hover:bg-slate-300"
+            disabled={reportSending}
+            onClick={() => void handleSendReport(true)}
+          >
+            <FileImage className="h-4 w-4" />
+            사진만 (보고서 X)
           </Button>
           <Button asChild variant="outline" size="lg">
             <Link href="/reports">보고 목록</Link>

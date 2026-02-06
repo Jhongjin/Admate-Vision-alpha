@@ -12,25 +12,23 @@ import {
 } from "@react-pdf/renderer";
 import type { AiAnalysisResult } from "../ai-analysis-service";
 
-// Register Korean Font (Freesentation)
-const FONT_BASE_URL = "https://kcbqxzmhztegdoodpepk.supabase.co/storage/v1/object/public/report-assets/fonts";
-
+// Register Korean Font (NanumGothic)
 Font.register({
-    family: "Freesentation",
-    src: `${FONT_BASE_URL}/Freesentation-Regular.ttf`,
+    family: "NanumGothic",
+    src: "https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.ttf",
 });
 
 Font.register({
-    family: "FreesentationBold",
-    src: `${FONT_BASE_URL}/Freesentation-Bold.ttf`,
+    family: "NanumGothicBold",
+    src: "https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Bold.ttf",
 });
 
 const styles = StyleSheet.create({
     page: {
-        fontFamily: "Freesentation",
+        fontFamily: "NanumGothic",
         padding: 40,
         backgroundColor: "#ffffff",
-        fontSize: 10,
+        fontSize: 9,
         color: "#334155", // slate-700
     },
     header: {
@@ -43,29 +41,29 @@ const styles = StyleSheet.create({
         alignItems: "flex-end",
     },
     headerTitle: {
-        fontSize: 20,
-        fontFamily: "FreesentationBold",
+        fontSize: 16,
+        fontFamily: "NanumGothicBold",
         color: "#1e293b", // slate-800
     },
     headerSub: {
-        fontSize: 10,
+        fontSize: 9,
         color: "#64748b", // slate-500
     },
     section: {
         marginBottom: 20,
     },
     sectionTitle: {
-        fontSize: 14,
-        fontFamily: "FreesentationBold",
+        fontSize: 11,
+        fontFamily: "NanumGothicBold",
         color: "#334155",
-        marginBottom: 8,
+        marginBottom: 6,
         borderLeftWidth: 3,
         borderLeftColor: "#4f46e5", // indigo-600
         paddingLeft: 6,
     },
     card: {
         backgroundColor: "#f8fafc", // slate-50
-        padding: 10,
+        padding: 8,
         borderRadius: 4,
         borderWidth: 1,
         borderColor: "#e2e8f0",
@@ -76,22 +74,22 @@ const styles = StyleSheet.create({
     },
     metricBox: {
         flex: 1,
-        padding: 10,
+        padding: 8,
         backgroundColor: "#f1f5f9", // slate-100
         borderRadius: 4,
     },
     metricLabel: {
-        fontSize: 8,
+        fontSize: 7,
         color: "#64748b",
         marginBottom: 4,
     },
     metricValue: {
-        fontSize: 12,
-        fontFamily: "FreesentationBold",
+        fontSize: 10,
+        fontFamily: "NanumGothicBold",
         color: "#0f172a",
     },
     analysisText: {
-        fontSize: 10,
+        fontSize: 9,
         lineHeight: 1.5,
         color: "#334155",
         textAlign: "justify",
@@ -117,7 +115,7 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     barLabel: {
-        fontSize: 8,
+        fontSize: 7,
         color: "#64748b",
         marginTop: 2,
     },
