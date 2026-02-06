@@ -1118,8 +1118,9 @@ export default function CaptureConfirmPage() {
           <Button
             size="lg"
             className="gap-2"
-            disabled={reportSending}
+            disabled={reportSending || data?.skipLocation === true}
             onClick={() => void handleSendReport()}
+            title={data?.skipLocation === true ? "위치 없음 세션에서는 사진만 보내기를 이용해 주세요." : undefined}
           >
             <Send className="h-4 w-4" />
             {reportSending ? "발송 중..." : "AI 보고서 보내기"}
