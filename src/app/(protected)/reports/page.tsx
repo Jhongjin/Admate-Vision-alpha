@@ -111,21 +111,21 @@ export default function ReportsPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">광고주</th>
-                  <th className="px-6 py-4">위치 / 노선</th>
-                  <th className="px-6 py-4">발송 상태</th>
-                  <th className="px-6 py-4">발송 시각</th>
-                  <th className="px-6 py-4 text-right">관리</th>
+                  <th className="px-6 py-4 whitespace-nowrap">광고주</th>
+                  <th className="px-6 py-4 whitespace-nowrap">위치 / 노선</th>
+                  <th className="px-6 py-4 whitespace-nowrap">발송 상태</th>
+                  <th className="px-6 py-4 whitespace-nowrap">발송 시각</th>
+                  <th className="px-6 py-4 text-right whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {reports.map((report) => (
                   <tr key={report.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-semibold text-slate-900">{report.advertiser_name}</div>
                       <div className="text-xs text-slate-500 mt-1">이미지 {report.image_count ?? 0}장</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-slate-700">
                         <MapPin className="h-3.5 w-3.5 text-slate-400" />
                         {buildLocationLabel(report)}

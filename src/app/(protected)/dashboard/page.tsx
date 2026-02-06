@@ -134,7 +134,7 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : recentReports.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             {recentReports.map((report) => (
               <Link key={report.id} href={`/reports`} className="block h-full">
                 <div className="group relative flex h-full items-start gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-indigo-100 hover:bg-slate-50/50">
