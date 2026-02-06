@@ -18,7 +18,8 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const EMAIL_DOMAIN = "@nasmedia.co.kr";
+  const [emailId, setEmailId] = useState("");
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,11 +45,13 @@ export default function LoginPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      const trimmed = email.trim();
-      if (!trimmed) return;
+      const trimmedId = emailId.trim();
+      if (!trimmedId) return;
+
+      const fullEmail = `${trimmedId}${EMAIL_DOMAIN}`;
       setIsSubmitting(true);
       try {
-        const user = await loginApi({ email: trimmed });
+        const user = await loginApi({ email: fullEmail });
         setRegisteredEmail(user.email, { keepLoggedIn });
         toast({ title: "로그인 완료", description: `${user.name}님, 환영합니다.` });
         router.replace("/capture");
@@ -62,7 +65,7 @@ export default function LoginPage() {
         setIsSubmitting(false);
       }
     },
-    [email, keepLoggedIn, router, toast]
+    [emailId, keepLoggedIn, router, toast]
   );
 
   return (
@@ -76,28 +79,31 @@ export default function LoginPage() {
               Sign In
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              가입한 이메일로 로그인하세요.
+              이메일 아이디를 입력하여 로그인하세요.
             </p>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-white/50 bg-white/80 p-6 shadow-xl shadow-slate-200/20 backdrop-blur-xl sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-medium">
-                  이메일
+                <Label htmlFor="emailId" className="text-slate-700 font-medium">
+                  이메일 아이디
                 </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="id@nasmedia.co.kr"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  className="h-12 border-slate-200 bg-white px-4 text-base focus-visible:ring-indigo-500"
-                />
+                <div className="flex h-12 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-base focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-0">
+                  <Input
+                    id="emailId"
+                    name="emailId"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="hong"
+                    value={emailId}
+                    onChange={(e) => setEmailId(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    className="h-auto flex-1 border-0 p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <span className="shrink-0 text-slate-500">{EMAIL_DOMAIN}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox
