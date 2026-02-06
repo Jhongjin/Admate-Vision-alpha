@@ -25,6 +25,8 @@ export type ReportEmailParams = {
   campaignManagerEmail: string;
   /** 캠페인 담당자 이름 */
   campaignManagerName: string;
+  /** 캠페인 담당자 이름 영문 표기 (푸터 상단 이름용, 선택) */
+  campaignManagerNameEn?: string;
   /** 로그인 사용자 이름 (발신자 표기용) */
   loginUserName: string;
   /** 광고주명 */
@@ -86,6 +88,70 @@ export function buildReportBody(params: ReportEmailParams): string {
   return body;
 }
 
+const MEDIA_ARCHIVE_URL = "https://www.nasmedia.co.kr/%EB%82%98%EC%8A%A4%EB%A6%AC%ED%8F%AC%ED%8A%B8/%EB%AF%B8%EB%94%94%EC%96%B4-%EC%95%84%EC%B9%B4%EC%9D%B4%EB%B8%8C/";
+const TREND_ARCHIVE_URL = "https://www.nasmedia.co.kr/%EB%82%98%EC%8A%A4%EB%A6%AC%ED%8F%AC%ED%8A%B8/%EC%A0%95%EA%B8%B0%EB%B3%B4%EA%B3%A0%EC%84%9C/";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** 본문(텍스트)을 HTML로 감싼 뒤 푸터를 붙인 HTML 문자열 반환 */
+export function buildReportHtml(params: ReportEmailParams): string {
+  const textBody = buildReportBody(params);
+  const lines = textBody.split("\n").map((line) => escapeHtml(line));
+  const bodyHtml = lines.join("<br>\n");
+
+  const { campaignManagerName, campaignManagerNameEn } = params;
+  const nameDisplay = campaignManagerNameEn
+    ? `${escapeHtml(campaignManagerName)} <span style="font-size:14px;font-weight:normal;color:#333;">${escapeHtml(campaignManagerNameEn)}</span>`
+    : escapeHtml(campaignManagerName);
+
+  const footerHtml = `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:32px;margin-bottom:0;">
+  <tr>
+    <td style="padding:0 0 16px 0;font-size:16px;font-weight:bold;color:#111;">${nameDisplay}</td>
+  </tr>
+  <tr>
+    <td style="padding:24px 0 0 0;border-top:1px solid #e5e7eb;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;border-radius:6px;padding:16px 20px;">
+        <tr>
+          <td style="padding:0 0 12px 0;font-size:13px;font-weight:bold;color:#374151;">Media Archive</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 4px 0;font-size:12px;color:#6b7280;">온모바일 | IPTV | OOH | 모바일광고플랫폼</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0 16px 0;">
+            <a href="${MEDIA_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0 4px 0;font-size:13px;font-weight:bold;color:#374151;">Trend Archive</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 4px 0;font-size:12px;color:#6b7280;">마케터라면 알아야 할 디지털 트렌드와 이슈</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0 0 0;">
+            <a href="${TREND_ARCHIVE_URL}" style="display:inline-block;padding:8px 16px;background-color:#ea580c;color:#fff;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;">바로가기</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+  return `
+<div style="font-family:Malgun Gothic,Apple SD Gothic Neo,sans-serif;font-size:14px;line-height:1.6;color:#333;">
+${bodyHtml}
+${footerHtml}
+</div>`;
+}
+
 export async function sendReportEmail(params: ReportEmailParams): Promise<{ ok: boolean; error?: string }> {
   if (!RESEND_API_KEY) {
     return { ok: false, error: "RESEND_API_KEY가 설정되지 않았습니다." };
@@ -98,7 +164,8 @@ export async function sendReportEmail(params: ReportEmailParams): Promise<{ ok: 
   const cc = params.primaryRecipient === "advertiser" ? [params.campaignManagerEmail] : [];
 
   const subject = buildReportSubject(params);
-  const body = buildReportBody(params);
+  const textBody = buildReportBody(params);
+  const htmlBody = buildReportHtml(params);
 
   const resend = new Resend(RESEND_API_KEY);
 
@@ -122,7 +189,8 @@ export async function sendReportEmail(params: ReportEmailParams): Promise<{ ok: 
       to: [to],
       cc: cc.length > 0 ? cc : undefined,
       subject,
-      text: body,
+      text: textBody,
+      html: htmlBody,
       attachments: attachments.length > 0 ? attachments : undefined,
     });
 
