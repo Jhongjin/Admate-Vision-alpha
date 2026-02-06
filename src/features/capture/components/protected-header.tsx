@@ -37,7 +37,7 @@ export function ProtectedHeader() {
         >
           {BRAND.name} <span className="text-indigo-600 ml-1 group-hover:text-indigo-500 transition-colors hidden md:inline">Vision</span>
         </Link>
-        <nav className="flex flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden scrollbar-none px-2 mask-linear">
+        <nav className="flex flex-1 items-center justify-end gap-1 md:justify-center">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Button
               key={href}
@@ -48,12 +48,15 @@ export function ProtectedHeader() {
                 "min-h-[36px] h-9 shrink-0 gap-1.5 px-2.5 rounded-full transition-all text-sm",
                 pathname === href
                   ? "bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50",
+                // Mobile: icon only (padding optimized for touch target but compact visual)
+                "px-2 md:px-3"
               )}
+              title={label} // Tooltip for icon-only mode
             >
               <Link href={href} className="flex items-center gap-1.5">
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{label}</span>
+                <Icon className="h-5 w-5 md:h-4 md:w-4 shrink-0" />
+                <span className="hidden md:inline">{label}</span>
               </Link>
             </Button>
           ))}
