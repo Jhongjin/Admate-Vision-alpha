@@ -113,6 +113,8 @@ export default function CaptureConfirmPage() {
   const [metaLoading, setMetaLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [reportSending, setReportSending] = useState(false);
+  /** AI 성과 분석 타임아웃 시 선택 시트 (다시 시도 / AI 없이 발송) */
+  const [showAiTimeoutSheet, setShowAiTimeoutSheet] = useState(false);
   const [includePpt, setIncludePpt] = useState(false);
   /** 게재 기간(일). 0이면 빈 칸(미입력), 발송 시 0/미입력이면 7일로 전달 */
   const [displayDays, setDisplayDays] = useState(7);
@@ -524,7 +526,7 @@ export default function CaptureConfirmPage() {
     }
   }, [isMultiSession, data?.adImages, editedFilenames, metaForFilename?.advertiser, advertiserLabel, toast]);
 
-  const handleSendReport = useCallback(async () => {
+  const handleSendReport = useCallback(async (skipAiAnalysis?: boolean) => {
     if (!matchedAdvertiserId) {
       toast({
         title: "보고 발송 불가",
@@ -581,6 +583,7 @@ export default function CaptureConfirmPage() {
             zipFilename,
             includePpt: includePpt || undefined,
             displayDays: includePpt ? (displayDays && displayDays >= 1 ? displayDays : 7) : undefined,
+            skipAiAnalysis: skipAiAnalysis === true ? true : undefined,
           }),
           signal: controller.signal,
         });
@@ -610,6 +613,8 @@ export default function CaptureConfirmPage() {
             : json.message;
         toast({ title: "보고 발송 완료", description: desc });
         router.push("/reports");
+      } else if (json.error === "AI_ANALYSIS_TIMEOUT") {
+        setShowAiTimeoutSheet(true);
       } else {
         toast({
           title: "발송 실패",
@@ -1070,7 +1075,7 @@ export default function CaptureConfirmPage() {
             size="lg"
             className="gap-2"
             disabled={reportSending}
-            onClick={handleSendReport}
+            onClick={() => void handleSendReport()}
           >
             <Send className="h-4 w-4" />
             {reportSending ? "발송 중..." : "보고 발송하기"}
@@ -1108,6 +1113,38 @@ export default function CaptureConfirmPage() {
               onClick={() => setShowNoStationSheet(false)}
             >
               일단 저장
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={showAiTimeoutSheet} onOpenChange={setShowAiTimeoutSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>AI 성과 분석 생성 시간 초과</SheetTitle>
+            <SheetDescription>
+              AI 보고서 생성이 완료되지 않았습니다. 다시 시도하시겠습니까? 아니면 AI 분석 없이 발송하시겠습니까?
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="flex-row flex-wrap gap-3 sm:gap-3 mt-6">
+            <Button
+              variant="outline"
+              className="flex-1 min-w-[100px]"
+              onClick={() => {
+                setShowAiTimeoutSheet(false);
+                void handleSendReport();
+              }}
+            >
+              다시 시도
+            </Button>
+            <Button
+              className="flex-1 min-w-[100px]"
+              onClick={() => {
+                setShowAiTimeoutSheet(false);
+                void handleSendReport(true);
+              }}
+            >
+              AI 없이 발송
             </Button>
           </SheetFooter>
         </SheetContent>

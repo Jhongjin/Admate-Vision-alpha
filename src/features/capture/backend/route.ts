@@ -8,7 +8,7 @@ import { fetchStationFlow } from "./report-exposure/public-data-service";
 import { calculateExposure } from "./report-exposure/exposure-calc";
 import { generateReportPpt } from "./report-exposure/ppt-generator";
 import { extractImageBase64sFromZip } from "./report-exposure/zip-to-images";
-import { generateAiAnalysis } from "./ai-analysis-service";
+import { generateAiAnalysis, type AiAnalysisResult } from "./ai-analysis-service";
 
 /** OCR API rate limit: 분당 최대 요청 수 (IP당) */
 const OCR_RATE_LIMIT_PER_MIN = 30;
@@ -58,6 +58,8 @@ const ReportBodySchema = z.object({
   includePpt: z.boolean().optional(),
   /** 게재 기간(일수). includePpt 시 노출량 계산에 사용. 기본 7 */
   displayDays: z.number().int().min(1).max(365).optional(),
+  /** AI 성과 분석 건너뛰기(타임아웃 시 사용자 선택용) */
+  skipAiAnalysis: z.boolean().optional(),
 }).passthrough();
 
 export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
@@ -168,10 +170,10 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
     const sentToEmail =
       payload.primaryRecipient === "advertiser" ? adv.email : adv.campaignManagerEmail;
 
-    /** Gemini 호출 타임아웃(ms). Vercel 서버리스 10초 제한 내에 DB·이메일까지 완료하려면 짧게 유지. */
-    const AI_ANALYSIS_TIMEOUT_MS = 6_000;
-    let aiAnalysisData = null;
-    if (payload.station && payload.line && payload.advertiserName) {
+    /** Gemini 호출 타임아웃(ms). 서버리스 60초 한도 내에서 DB·이메일까지 여유 두고 최대한 대기. */
+    const AI_ANALYSIS_TIMEOUT_MS = 55_000;
+    let aiAnalysisData: AiAnalysisResult | null = null;
+    if (payload.station && payload.line && payload.advertiserName && !payload.skipAiAnalysis) {
       try {
         aiAnalysisData = await Promise.race([
           generateAiAnalysis({
@@ -185,7 +187,18 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
           ),
         ]);
       } catch (e) {
-        console.error("[capture/report] AI Analysis failed or timeout:", e);
+        const isTimeout = e instanceof Error && e.message === "AI_ANALYSIS_TIMEOUT";
+        if (isTimeout) {
+          return c.json(
+            {
+              ok: false,
+              error: "AI_ANALYSIS_TIMEOUT",
+              message: "AI 성과 분석 생성이 시간 초과되었습니다. 다시 시도하거나 AI 분석 없이 발송할 수 있습니다.",
+            },
+            200
+          );
+        }
+        console.error("[capture/report] AI Analysis failed:", e);
         aiAnalysisData = null;
       }
     }
