@@ -7,6 +7,10 @@ import { CurrentUserProvider } from "@/features/auth/context/current-user-contex
 export const metadata: Metadata = {
   title: "AdMate Vision - 옥외 광고 게재 현황 자동 보고",
   description: "AdMate Vision. 옥외 광고 촬영·광고주 인식·보고를 한 번에.",
+  icons: {
+    icon: "/app-icon.svg",
+    apple: "/apple-icon",
+  },
 };
 
 export const viewport: Viewport = {
