@@ -14,7 +14,6 @@ export const contentType = "image/png";
 export default function Icon() {
     return new ImageResponse(
         (
-            // ImageResponse JSX element
             <div
                 style={{
                     width: "100%",
@@ -22,10 +21,12 @@ export default function Icon() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "#0f172a", // Slate-900: Deep Navy/Black
-                    borderRadius: "0px", // Let OS handle rounding
+                    // Pink/Purple to Blue Gradient (Match user's screenshot memory)
+                    background: "linear-gradient(135deg, #d946ef 0%, #8b5cf6 50%, #3b82f6 100%)",
+                    borderRadius: "0px", // OS handles clipping
                 }}
             >
+                {/* Inner white container effect */}
                 <div
                     style={{
                         width: "120px",
@@ -33,20 +34,20 @@ export default function Icon() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)", // Indigo to Purple subtle gradient for the shape only
-                        borderRadius: "30px", // Soft rounded square inside
+                        backgroundColor: "rgba(255, 255, 255, 0.2)", // Semi-transparent white box
+                        borderRadius: "32px",
+                        border: "4px solid rgba(255, 255, 255, 0.4)",
                         color: "white",
                         fontSize: "72px",
-                        fontWeight: 800,
+                        fontWeight: 600,
                         fontFamily: "sans-serif",
-                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)"
+                        boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)"
                     }}
                 >
                     A
                 </div>
             </div>
         ),
-        // ImageResponse options
         {
             ...size,
         }
