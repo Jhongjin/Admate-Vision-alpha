@@ -33,11 +33,11 @@ export function ProtectedHeader() {
       <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/"
-          className="flex min-h-[44px] min-w-[44px] shrink-0 items-center text-base font-semibold tracking-tight text-slate-900 group"
+          className="flex min-h-[44px] min-w-[44px] shrink-0 items-center text-base font-semibold tracking-tight text-slate-900 group mr-auto md:mr-0"
         >
-          {BRAND.name} <span className="text-indigo-600 ml-1 group-hover:text-indigo-500 transition-colors">Vision</span>
+          {BRAND.name} <span className="text-indigo-600 ml-1 group-hover:text-indigo-500 transition-colors hidden md:inline">Vision</span>
         </Link>
-        <nav className="flex flex-1 items-center justify-end gap-1 overflow-x-auto overflow-y-hidden scrollbar-none pl-2">
+        <nav className="flex flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden scrollbar-none px-2 mask-linear">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Button
               key={href}
@@ -45,7 +45,7 @@ export function ProtectedHeader() {
               variant={pathname === href ? "secondary" : "ghost"}
               size="sm"
               className={cn(
-                "min-h-[40px] shrink-0 gap-1.5 px-3 rounded-full transition-all",
+                "min-h-[36px] h-9 shrink-0 gap-1.5 px-2.5 rounded-full transition-all text-sm",
                 pathname === href
                   ? "bg-indigo-50 text-indigo-700 font-medium hover:bg-indigo-100"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
@@ -53,14 +53,14 @@ export function ProtectedHeader() {
             >
               <Link href={href} className="flex items-center gap-1.5">
                 <Icon className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">{label}</span>
+                <span>{label}</span>
               </Link>
             </Button>
           ))}
         </nav>
         <div className="flex shrink-0 items-center gap-1">
           <span
-            className="max-w-[100px] truncate text-xs text-slate-600 sm:max-w-[140px]"
+            className="max-w-[100px] truncate text-xs text-slate-600 sm:max-w-[140px] hidden md:block"
             title={email ?? undefined}
           >
             {profile?.name ? `${profile.name}` : email ?? ""}
