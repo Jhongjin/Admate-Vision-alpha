@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import JSZip from "jszip";
 import { MapPin, Building2, Send, FileImage, Download, Replace, RotateCcw, RotateCw, MapPinOff, Trash2 } from "lucide-react";
@@ -123,17 +123,92 @@ export default function CaptureConfirmPage() {
   const advertisers = advertisersData ?? [];
   const { profile } = useUserProfile();
 
-  useEffect(() => {
+  // Helper: URL to Base64
+  const urlToBase64 = async (url: string) => {
     try {
-      const raw = sessionStorage.getItem(CAPTURE_SESSION_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as CaptureSessionData;
-        if (parsed.imageDataUrl || isLocationAdSession(parsed)) setData(parsed);
-      }
-    } catch {
-      /* ignore */
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("Image fetch failed", e);
+      return "";
     }
-  }, []);
+  };
+
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("sessionId");
+
+  useEffect(() => {
+    if (sessionId) {
+      // Load from DB
+      setMetaLoading(true);
+      fetch(`/api/reports/${sessionId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed");
+          return res.json();
+        })
+        .then(async (report) => {
+          const imageUrls: string[] = report.image_urls || [];
+          const adImages = await Promise.all(imageUrls.map(async (url) => ({
+            imageDataUrl: await urlToBase64(url),
+            capturedAt: report.created_at
+          })));
+
+          const sessionData: CaptureSessionData = {
+            adImages: adImages.filter(img => img.imageDataUrl),
+            locationImage: undefined, // Location image not currently stored separately as URL in many cases, or implies mixed in images? 
+            // NOTE: DB doesn't distinguish location image clearly if not saved separately. Assuming adImages only for now.
+            // If location image was saved, it might be in image_urls[0] or similar, but logic is tricky.
+            // For report confirmation, main goal is to resend/download.
+            capturedAt: report.sent_at,
+            locationCapturedAt: report.sent_at,
+            lat: null,
+            lng: null,
+            skipLocation: !report.station,
+          };
+          setData(sessionData);
+          setMatchedAdvertiserId(report.advertiser_id);
+          setStationName(report.station);
+          setSubwayLine(report.line);
+          setAdvertiserLabel(report.advertiser_name);
+          setUserEnteredName(report.location_label || "");
+
+          // Set Filenames State
+          const dateStr = report.sent_at ? format(new Date(report.sent_at), "yyyyMMdd") : format(new Date(), "yyyyMMdd");
+          setMetaForFilename({
+            advertiser: report.advertiser_name,
+            line: report.line || "미인식",
+            station: report.station || "미인식",
+            dateStr
+          });
+          const names = adImages.map((_, i) =>
+            !report.station
+              ? buildNoLocationFilename(report.advertiser_name, report.location_label || "", dateStr, i + 1)
+              : buildCaptureFilename(report.advertiser_name, report.line, report.station, report.location_label || "", dateStr, i + 1)
+          );
+          setGeneratedFilenames(names);
+          setEditedFilenames(names);
+        })
+        .catch((e) => toast({ title: "불러오기 실패", description: "리포트를 찾을 수 없습니다.", variant: "destructive" }))
+        .finally(() => setMetaLoading(false));
+    } else {
+      // Load from SessionStorage
+      try {
+        const raw = sessionStorage.getItem(CAPTURE_SESSION_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as CaptureSessionData;
+          if (parsed.imageDataUrl || isLocationAdSession(parsed)) setData(parsed);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [sessionId, toast]);
 
   useEffect(() => {
     if (!data) return;

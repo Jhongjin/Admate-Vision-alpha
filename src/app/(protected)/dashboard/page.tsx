@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Camera, FileText, MapPin, ChevronRight, Activity } from "lucide-react";
+import { Camera, FileText, MapPin, ChevronRight, Activity, Image as ImageIcon } from "lucide-react";
 import { useRegisteredEmail } from "@/features/auth/hooks/useRegisteredEmail";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ type ReportRow = {
   image_count: number | null;
   sent_at: string;
   sent_to_email: string | null;
+  image_urls?: string[];
 };
 
 function buildLocationLabel(row: ReportRow): string {
@@ -68,7 +69,7 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const recentReports = reports.slice(0, 5);
+  const recentReports = reports.slice(0, 6); // 2열 배치이므로 짝수 개수(6개)가 좋아 보임
 
   return (
     <div className="container py-8">
@@ -127,44 +128,58 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-xl" />
             ))}
           </div>
         ) : recentReports.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {recentReports.map((report) => (
-              <Link key={report.id} href={`/reports`} className="block">
-                <div className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-indigo-100 hover:bg-slate-50/50">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                      <FileText className="h-5 w-5" />
-                    </div>
+              <Link key={report.id} href={`/reports`} className="block h-full">
+                <div className="group relative flex h-full items-start gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-indigo-100 hover:bg-slate-50/50">
+                  {/* Thumbnail Image */}
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100 border border-slate-200">
+                    {report.image_urls && report.image_urls.length > 0 ? (
+                      <img
+                        src={report.image_urls[0]}
+                        alt="Thumbnail"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-slate-400">
+                        <ImageIcon className="h-8 w-8" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col justify-between h-full w-full">
                     <div>
-                      <p className="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                        {report.advertiser_name}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                        <MapPin className="h-3 w-3" />
-                        {buildLocationLabel(report)}
-                        <span className="text-slate-300">|</span>
-                        <span>{format(new Date(report.sent_at), "yyyy. MM. dd HH:mm")}</span>
+                      <div className="flex items-start justify-between">
+                        <p className="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors line-clamp-1">
+                          {report.advertiser_name}
+                        </p>
+                        {report.sent_to_email ? (
+                          <Badge className="ml-2 shrink-0 bg-green-50 text-[10px] text-green-700 border-green-100 hover:bg-green-100 px-1.5 py-0.5 h-5">
+                            발송됨
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="ml-2 shrink-0 text-[10px] px-1.5 py-0.5 h-5">미발송</Badge>
+                        )}
+                      </div>
+
+                      <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span className="line-clamp-1">{buildLocationLabel(report)}</span>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 self-end sm:self-center">
-                    <Badge variant="outline" className="border-slate-200 bg-white text-slate-600 font-normal">
-                      이미지 {report.image_count ?? 0}장
-                    </Badge>
-                    {report.sent_to_email ? (
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
-                        발송 완료
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-500">미발송</Badge>
-                    )}
-                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-400" />
+
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2 text-xs text-slate-400">
+                      <span>{format(new Date(report.sent_at), "MM.dd HH:mm")}</span>
+                      <span className="flex items-center group-hover:text-indigo-500 transition-colors">
+                        상세보기 <ChevronRight className="h-3 w-3 ml-0.5" />
+                      </span>
+                    </div>
                   </div>
                 </div>
               </Link>

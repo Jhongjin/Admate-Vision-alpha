@@ -430,7 +430,7 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
     const supabase = getSupabase(c);
     const { data, error } = await supabase
       .from("vision_ocr_reports")
-      .select("id, advertiser_id, advertiser_name, station, line, location_label, image_count, sent_at, sent_to_email")
+      .select("id, advertiser_id, advertiser_name, station, line, location_label, image_count, sent_at, sent_to_email, image_urls")
       .order("sent_at", { ascending: false });
     if (error) {
       return c.json({ error: "DB_ERROR", message: error.message }, 500);
