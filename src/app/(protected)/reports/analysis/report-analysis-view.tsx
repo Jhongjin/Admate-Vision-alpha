@@ -44,6 +44,7 @@ export interface ReportDataWithAnalysis {
     campaign_manager_email: string | null;
     contact_name: string | null;
   } | null;
+  image_urls?: string[];
 }
 
 /** 차트 값이 100 초과일 수 있으므로 0~100 비율로 정규화 */
@@ -315,43 +316,36 @@ export function ReportAnalysisView({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="group relative aspect-video overflow-hidden rounded-lg bg-slate-100 border border-slate-200 md:col-span-1">
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-400 bg-slate-100">
-                    <img
-                      src="https://images.unsplash.com/photo-1542289196-8575a6f87452?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-                      alt="Subway Ad Main"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
-                    <p className="text-xs font-medium text-white flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> 근거리 정면 촬영
-                    </p>
-                  </div>
-                </div>
-                <div className="grid gap-4 grid-rows-2 h-full">
-                  <div className="relative overflow-hidden rounded-lg bg-slate-100 border border-slate-200">
-                    <img
-                      src="https://images.unsplash.com/photo-1565514020176-ade3ef4a1850?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                      className="absolute inset-0 h-full w-full object-cover"
-                      alt="Context View 1"
-                    />
-                    <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <p className="text-xs font-medium text-white">원거리(주변 환경 포함)</p>
+              <div className={`grid gap-4 ${(!report.image_urls || report.image_urls.length <= 1) ? 'grid-cols-1' :
+                  report.image_urls.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                    report.image_urls.length === 3 ? 'grid-cols-1 md:grid-cols-2' :
+                      'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                }`}>
+                {(report.image_urls && report.image_urls.length > 0) ? (
+                  report.image_urls.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className={`group relative aspect-video overflow-hidden rounded-lg bg-slate-100 border border-slate-200 ${report.image_urls!.length === 3 && idx === 0 ? 'md:row-span-2 md:h-full' : ''
+                        }`}
+                    >
+                      <img
+                        src={url}
+                        alt={`현장 촬영 이미지 ${idx + 1}`}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-3">
+                        <p className="text-xs font-medium text-white flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {idx === 0 ? "메인 촬영" : `상세 이미지 ${idx}`}
+                        </p>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="flex h-40 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                    이미지가 없습니다.
                   </div>
-                  <div className="relative overflow-hidden rounded-lg bg-slate-100 border border-slate-200">
-                    <img
-                      src="https://images.unsplash.com/photo-1517153295259-38e3b55010a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                      className="absolute inset-0 h-full w-full object-cover"
-                      alt="Context View 2"
-                    />
-                    <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <p className="text-xs font-medium text-white">이동 동선 촬영</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
               <p className="text-xs text-slate-400 mt-3 text-right">
                 * 상세 원본 이미지는 함께 송부된 첨부파일을 확인해 주세요.
@@ -369,7 +363,7 @@ export function ReportAnalysisView({
             <h4 className="font-bold text-slate-900">{managerName}</h4>
             <p>{managerEmail}</p>
           </div>
-          <p>© 2026 AdMate Vision. AI-Powered Advertisement Analysis System.</p>
+          <p>© 2026 Kt Nasmedia AdMate Vision. AI-Powered Advertisement Analysis System.</p>
         </div>
       </main>
     </div>

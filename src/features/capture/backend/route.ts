@@ -6,7 +6,7 @@ import { runGoogleVisionOcr } from "./ocr-service";
 import { sendReportEmail } from "./report-email";
 import { fetchStationFlow } from "./report-exposure/public-data-service";
 import { calculateExposure } from "./report-exposure/exposure-calc";
-import { generateReportPpt } from "./report-exposure/ppt-generator";
+import { generateReportPdf } from "./report-exposure/pdf-generator";
 import { extractImageBase64sFromZip } from "./report-exposure/zip-to-images";
 import { generateAiAnalysis, type AiAnalysisResult } from "./ai-analysis-service";
 
@@ -130,40 +130,20 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
 
       const dateStr = payload.dateStr ?? new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
-      let pptAttachment: { filename: string; buffer: Buffer } | undefined;
-      if (payload.includePpt && payload.station && payload.line) {
+      let exposure: { totalExposure: number; dailyFlow: number } | undefined;
+      const imageBase64s = payload.zipBase64
+        ? await extractImageBase64sFromZip(payload.zipBase64)
+        : [];
+
+      // Calculate exposure for PDF (replacing PPT logic)
+      if (payload.station && payload.line) {
         const flowResult = await fetchStationFlow(payload.station, payload.line);
         if (flowResult.ok) {
           const displayDays = payload.displayDays ?? 7;
-          const exposure = calculateExposure({
+          exposure = calculateExposure({
             flowData: flowResult.data,
             displayDays,
           });
-          try {
-            const imageBase64s = payload.zipBase64
-              ? await extractImageBase64sFromZip(payload.zipBase64)
-              : undefined;
-            const pptBuffer = await generateReportPpt({
-              advertiserName: payload.advertiserName ?? adv.name,
-              station: payload.station,
-              line: payload.line,
-              displayDays,
-              exposure,
-              imageBase64s: imageBase64s?.length ? imageBase64s : undefined,
-              subtitle: payload.userEnteredName ?? undefined,
-              dateStr,
-              campaignManagerName: adv.campaignManagerName ?? undefined,
-              campaignManagerEmail: adv.campaignManagerEmail ?? undefined,
-            });
-            const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
-            const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
-            pptAttachment = {
-              filename: `노출량보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pptx`,
-              buffer: pptBuffer,
-            };
-          } catch (pptErr) {
-            console.error("[capture/report] PPT 생성 실패:", pptErr);
-          }
         }
       }
 
@@ -174,6 +154,10 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       /** Gemini 호출 타임아웃(ms). Vercel Pro(5분) 환경이므로 3분까지 대기. */
       const AI_ANALYSIS_TIMEOUT_MS = 180_000;
       let aiAnalysisData: AiAnalysisResult | null = null;
+      console.log('station', payload.station)
+      console.log('line', payload.line)
+      console.log('advertiserName', payload.advertiserName)
+      console.log('skipAiAnalysis', payload.skipAiAnalysis)
       if (payload.station && payload.line && payload.advertiserName && !payload.skipAiAnalysis) {
         try {
           aiAnalysisData = await Promise.race([
@@ -203,6 +187,33 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
           aiAnalysisData = null;
         }
       }
+      // Generate PDF
+      let pdfAttachment: { filename: string; buffer: Buffer } | undefined;
+      try {
+        const safeStation = payload.station?.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
+        const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
+
+        const pdfBuffer = await generateReportPdf({
+          advertiserName: payload.advertiserName ?? adv.name,
+          station: payload.station ?? "",
+          line: payload.line ?? "",
+          dateStr,
+          aiAnalysis: aiAnalysisData,
+          imageBase64s: imageBase64s,
+          exposure: exposure ? {
+            totalExposure: exposure.totalExposure,
+            dailyFlow: exposure.dailyFlow,
+          } : undefined,
+        });
+
+        pdfAttachment = {
+          filename: `성과분석보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pdf`,
+          buffer: pdfBuffer,
+        };
+      } catch (pdfErr) {
+        console.error("[capture/report] PDF 생성 실패:", pdfErr);
+      }
+
 
       const { data: insertedReport, error: insertErr } = await supabase.from("vision_ocr_reports").insert({
         advertiser_id: payload.advertiserId,
@@ -224,6 +235,49 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         }, 500);
       }
 
+      // 4. 이미지 스토리지 업로드 및 URL 업데이트
+      let imageUrls: string[] = [];
+      try {
+        // 이미 위에서 추출한 imageBase64s 사용
+        if (imageBase64s.length > 0) {
+          const uploadPromises = imageBase64s.map(async (base64, index) => {
+            const buffer = Buffer.from(base64, "base64");
+            // 파일명: {reportId}/{index}.jpg
+            const path = `${insertedReport.id}/${index}.jpg`;
+            const { error: uploadErr } = await supabase.storage
+              .from("report-images")
+              .upload(path, buffer, {
+                contentType: "image/jpeg",
+                upsert: true,
+              });
+
+            if (uploadErr) {
+              console.error(`[capture/report] Image upload failed (${index}):`, uploadErr);
+              return null;
+            }
+
+            const { data: publicUrlData } = supabase.storage
+              .from("report-images")
+              .getPublicUrl(path);
+
+            return publicUrlData.publicUrl;
+          });
+
+          const results = await Promise.all(uploadPromises);
+          imageUrls = results.filter((url): url is string => url !== null);
+
+          if (imageUrls.length > 0) {
+            await supabase
+              .from("vision_ocr_reports")
+              .update({ image_urls: imageUrls })
+              .eq("id", insertedReport.id);
+          }
+        }
+      } catch (uploadOrUpdateErr) {
+        console.error("[capture/report] Image upload/update failed:", uploadOrUpdateErr);
+        // 에러가 나도 메일 발송은 계속 진행 (이미지가 웹에서 안 보일 뿐)
+      }
+
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://vision-ooh.admate.ai.kr");
       const reportUrl = `${baseUrl}/reports/analysis/${insertedReport.id}`;
 
@@ -241,7 +295,7 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         dateStr,
         zipBase64: payload.zipBase64,
         zipFilename: payload.zipFilename,
-        pptAttachment,
+        pdfAttachment,
         reportUrl,
       });
 
