@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { RotateCw, AlertCircle, Bot } from "lucide-react";
+import { ArrowLeft, RotateCw, AlertCircle, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ReportAnalysisView, type ReportDataWithAnalysis } from "../report-analysis-view";
