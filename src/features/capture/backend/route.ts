@@ -224,7 +224,7 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         }, 500);
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://vision-ooh.admate.ai.kr");
       const reportUrl = `${baseUrl}/reports/analysis/${insertedReport.id}`;
 
       const result = await sendReportEmail({
