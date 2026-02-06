@@ -12,20 +12,20 @@ import {
 } from "@react-pdf/renderer";
 import type { AiAnalysisResult } from "../ai-analysis-service";
 
-// Register Korean Font
+// Register Korean Font (Spoqa Han Sans Neo - Modern & Readable)
 Font.register({
-    family: "NanumGothic",
-    src: "https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.ttf",
+    family: "SpoqaHanSansNeo",
+    src: "https://cdnjs.cloudflare.com/ajax/libs/spoqa-han-sans/0.1.0/SpoqaHanSans-Regular.ttf",
 });
 
 Font.register({
-    family: "NanumGothicBold",
-    src: "https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Bold.ttf",
+    family: "SpoqaHanSansNeoBold",
+    src: "https://cdnjs.cloudflare.com/ajax/libs/spoqa-han-sans/0.1.0/SpoqaHanSans-Bold.ttf",
 });
 
 const styles = StyleSheet.create({
     page: {
-        fontFamily: "NanumGothic",
+        fontFamily: "SpoqaHanSansNeo",
         padding: 40,
         backgroundColor: "#ffffff",
         fontSize: 10,
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 20,
-        fontFamily: "NanumGothicBold",
+        fontFamily: "SpoqaHanSansNeoBold",
         color: "#1e293b", // slate-800
     },
     headerSub: {
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 14,
-        fontFamily: "NanumGothicBold",
+        fontFamily: "SpoqaHanSansNeoBold",
         color: "#334155",
         marginBottom: 8,
         borderLeftWidth: 3,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     },
     metricValue: {
         fontSize: 12,
-        fontFamily: "NanumGothicBold",
+        fontFamily: "SpoqaHanSansNeoBold",
         color: "#0f172a",
     },
     analysisText: {
