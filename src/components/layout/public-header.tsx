@@ -25,11 +25,12 @@ export function PublicHeader() {
       <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/"
-          className="min-h-[44px] min-w-[44px] shrink-0 text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600 flex items-center whitespace-nowrap"
+          className="min-h-[44px] min-w-[44px] text-base font-semibold tracking-tight text-slate-900 hover:text-primary-600 flex items-center whitespace-nowrap mr-auto"
         >
-          {BRAND.name}
+          <span>AdMate</span>
+          <span className="hidden sm:inline-block ml-1 text-indigo-600">Vision</span>
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 shrink-0">
           {email ? (
             <div className="flex items-center gap-3">
               <Button asChild size="sm" className="min-h-[44px] px-4 font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm border border-transparent">
