@@ -5,8 +5,9 @@
 import { Resend } from "resend";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
+// 보고 메일과 동일한 발신 주소 사용 (도메인 인증 시 @nasmedia.co.kr 등 사용)
 const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL ?? "AdMate Vision <onboarding@resend.dev>";
+  process.env.RESEND_FROM_EMAIL ?? "나스미디어 보고 <onboarding@resend.dev>";
 
 function getBaseUrl(): string {
   const vercel = process.env.VERCEL_URL;

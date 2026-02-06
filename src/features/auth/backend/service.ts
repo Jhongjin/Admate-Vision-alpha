@@ -101,10 +101,11 @@ export async function signup(
   });
 
   if (!sendResult.ok) {
+    const detail = sendResult.error ?? '알 수 없는 오류';
     return failure(
       503,
       authErrorCodes.serviceUnavailable,
-      '회원가입은 완료되었으나 인증 메일 발송에 실패했습니다. 잠시 후 다시 시도하거나 관리자에게 문의하세요.'
+      `회원가입은 완료되었으나 인증 메일 발송에 실패했습니다. (${detail}) 잠시 후 다시 시도하거나 RESEND_API_KEY·도메인 인증을 확인해 주세요.`
     );
   }
 
