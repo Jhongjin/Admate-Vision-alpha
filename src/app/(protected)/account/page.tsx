@@ -65,6 +65,27 @@ export default function AccountPage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-6 max-w-md border-indigo-100">
+        <CardHeader>
+          <CardTitle className="text-lg text-indigo-900">고객센터</CardTitle>
+          <CardDescription>
+            궁금한 점이나 불편한 점이 있으신가요?
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            asChild
+            variant="outline"
+            className="w-full justify-start gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+          >
+            <a href="mailto:adso@nasmedia.co.kr">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+              문의하기 (adso@nasmedia.co.kr)
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="mt-6 max-w-md border-amber-100">
         <CardHeader>
           <CardTitle className="text-lg text-amber-800">회원탈퇴</CardTitle>
