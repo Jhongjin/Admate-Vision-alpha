@@ -82,13 +82,12 @@ export function PublicFooter() {
               </p>
               <div className="relative">
                 <select
-                  className="w-full appearance-none rounded-md border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm text-slate-600 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full appearance-none rounded-md border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm text-slate-600 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer hover:bg-slate-50"
                   defaultValue=""
                   onChange={(e) => {
-                    // 현재는 클릭 안되게 처리 요청이므로 아무 동작 안함 or alert
-                    // e.target.value && window.open(...) 
+                    // 현재는 클릭 안되게 처리 (이동 로직 없음)
+                    // 향후 구현 시 window.open(...) 사용
                   }}
-                  disabled // 클릭은 안되게 처리
                 >
                   <option value="" disabled hidden>Family Sites</option>
                   {familySites.map((site) => (
