@@ -80,7 +80,24 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       );
     }
     const { imageDataUrl } = parsed.data;
-    const result = await runGoogleVisionOcr(imageDataUrl);
+
+    // Fetch advertiser hints for Gemini
+    const supabase = getSupabase(c);
+    const { data: advList } = await supabase
+      .from("vision_ocr_advertisers")
+      .select("name, search_terms");
+
+    const hints: string[] = [];
+    if (advList) {
+      for (const row of advList) {
+        hints.push(row.name);
+        if (row.search_terms && Array.isArray(row.search_terms)) {
+          hints.push(...row.search_terms);
+        }
+      }
+    }
+
+    const result = await runGoogleVisionOcr(imageDataUrl, hints); // Now uses Gemini
 
     if (result == null) {
       return c.json(
@@ -96,6 +113,9 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       text: result.text,
       confidence: result.confidence,
       textForStation: result.textForStation,
+      // Add extra fields for client auto-fill if client supports it
+      advertiserName: result.advertiserName,
+      line: result.line,
     });
   });
 
