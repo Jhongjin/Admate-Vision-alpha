@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "AdMate Vision - 옥외 광고 게재 현황 자동 보고",
   description: "AdMate Vision. 옥외 광고 촬영·광고주 인식·보고를 한 번에.",
   icons: {
-    icon: "/app-icon.svg",
+    icon: "/apple-icon", // Use the generated PNG for favicon too to keep consistent look
     apple: "/apple-icon",
   },
 };
