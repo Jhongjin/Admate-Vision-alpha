@@ -41,7 +41,7 @@
 | 3 | 동일 | `ReportBodySchema` 검증, `advertiserId` 없으면 400 |
 | 4 | 동일 | Supabase로 광고주 조회, 없으면 404 |
 | 5 | 동일 | (선택) PPT: `includePpt && station && line` 이면 노출량 계산 후 PPT 생성 |
-| 6 | 동일 | **AI 분석**: `station && line && advertiserName` 이면 `generateAiAnalysis()` 호출, 실패 시 로그만 하고 `ai_analysis: null` 로 저장 |
+| 6 | 동일 | **AI 분석**: `station && line && advertiserName` 이면 `generateAiAnalysis()` 호출. **6초 타임아웃** 적용 — 초과 시 `ai_analysis: null` 로 저장 후 DB·이메일 진행(서버리스 제한 회피). 실패/타임아웃 시 로그만 남김 |
 | 7 | 동일 | **DB 저장**: `vision_ocr_reports` 에 insert (advertiser_id, station, line, ai_analysis 등), `insertedReport.id` 확보 |
 | 8 | 동일 | **리포트 URL**: `baseUrl + /reports/analysis/${insertedReport.id}` |
 | 9 | 동일 | **이메일 발송**: `sendReportEmail({ ..., reportUrl })` — 본문에 리포트 링크 포함 |
@@ -68,3 +68,11 @@
 - **목록 이동**: 성공 시 프론트에서 `router.push("/reports")` 로 이동, 목록 페이지는 GET /api/reports 로 최신 목록 표시.
 
 역명(위치)이 없는 보고서는 백엔드에서 `ai_analysis` 를 생성하지 않으며, 목록에서는 **역명이 있는 경우에만** "AI 분석" 버튼이 보이도록 처리되어 있습니다.
+
+---
+
+## 6. Gemini와 발송 완료 시점
+
+- **순서**: 백엔드에서 **AI 분석 생성 → DB 저장 → 이메일 발송** 순으로 진행합니다. Gemini가 끝나야 DB·이메일이 실행됩니다.
+- **타임아웃**: Gemini 호출에 **6초** 타임아웃을 두어, 응답이 늦어지면 `ai_analysis` 없이 DB 저장·이메일을 진행합니다. 이메일은 발송되고 목록에도 표시되며, 해당 리포트의 AI 분석 페이지만 "데이터 없음"으로 보입니다.
+- **클라이언트**: 발송 요청에 **90초** 타임아웃을 두어, 서버가 응답하지 않으면 "요청이 시간 초과되었습니다" 토스트를 띄웁니다.

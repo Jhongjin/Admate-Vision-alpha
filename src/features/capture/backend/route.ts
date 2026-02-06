@@ -168,17 +168,25 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
     const sentToEmail =
       payload.primaryRecipient === "advertiser" ? adv.email : adv.campaignManagerEmail;
 
+    /** Gemini 호출 타임아웃(ms). Vercel 서버리스 10초 제한 내에 DB·이메일까지 완료하려면 짧게 유지. */
+    const AI_ANALYSIS_TIMEOUT_MS = 6_000;
     let aiAnalysisData = null;
     if (payload.station && payload.line && payload.advertiserName) {
       try {
-        aiAnalysisData = await generateAiAnalysis({
-          station: payload.station,
-          line: payload.line,
-          advertiserName: payload.advertiserName,
-          dateStr,
-        });
+        aiAnalysisData = await Promise.race([
+          generateAiAnalysis({
+            station: payload.station,
+            line: payload.line,
+            advertiserName: payload.advertiserName,
+            dateStr,
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("AI_ANALYSIS_TIMEOUT")), AI_ANALYSIS_TIMEOUT_MS)
+          ),
+        ]);
       } catch (e) {
-        console.error("AI Analysis Generation Failed", e);
+        console.error("[capture/report] AI Analysis failed or timeout:", e);
+        aiAnalysisData = null;
       }
     }
 

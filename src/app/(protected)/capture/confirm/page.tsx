@@ -557,27 +557,36 @@ export default function CaptureConfirmPage() {
         const advSafe = (metaForFilename?.advertiser ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "광고주미인식";
         zipFilename = `${advSafe}_촬영_${metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd")}_${format(new Date(), "HHmm")}.zip`;
       }
-      const res = await fetch("/api/capture/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          advertiserId: matchedAdvertiserId,
-          advertiserName: metaForFilename?.advertiser ?? advertiserLabel ?? undefined,
-          primaryRecipient,
-          senderNameOption,
-          loginUserName: profile?.name ?? "",
-          userEnteredName: userEnteredName.trim() || undefined,
-          locationLabel: addressLabel?.trim() || undefined,
-          station: stationName ?? metaForFilename?.station ?? undefined,
-          line: subwayLine ?? metaForFilename?.line ?? undefined,
-          imageCount: data?.adImages?.length ?? 0,
-          dateStr: metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd"),
-          zipBase64,
-          zipFilename,
-          includePpt: includePpt || undefined,
-          displayDays: includePpt ? (displayDays && displayDays >= 1 ? displayDays : 7) : undefined,
-        }),
-      });
+      const REPORT_SEND_TIMEOUT_MS = 90_000;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REPORT_SEND_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetch("/api/capture/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            advertiserId: matchedAdvertiserId,
+            advertiserName: metaForFilename?.advertiser ?? advertiserLabel ?? undefined,
+            primaryRecipient,
+            senderNameOption,
+            loginUserName: profile?.name ?? "",
+            userEnteredName: userEnteredName.trim() || undefined,
+            locationLabel: addressLabel?.trim() || undefined,
+            station: stationName ?? metaForFilename?.station ?? undefined,
+            line: subwayLine ?? metaForFilename?.line ?? undefined,
+            imageCount: data?.adImages?.length ?? 0,
+            dateStr: metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd"),
+            zipBase64,
+            zipFilename,
+            includePpt: includePpt || undefined,
+            displayDays: includePpt ? (displayDays && displayDays >= 1 ? displayDays : 7) : undefined,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       let json: { ok?: boolean; message?: string; error?: string; savedToHistory?: boolean };
       try {
         json = (await res.json()) as {
@@ -609,7 +618,12 @@ export default function CaptureConfirmPage() {
         });
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "발송 중 오류가 발생했습니다.";
+      const isAbort = e instanceof Error && e.name === "AbortError";
+      const msg = isAbort
+        ? "요청이 시간 초과되었습니다. 잠시 후 다시 시도해 주세요."
+        : e instanceof Error
+          ? e.message
+          : "발송 중 오류가 발생했습니다.";
       toast({ title: "발송 실패", description: msg, variant: "destructive" });
     } finally {
       setReportSending(false);
