@@ -610,12 +610,17 @@ export default function CaptureConfirmPage() {
             : typeof json.error === "string"
               ? json.error
               : "이메일 발송에 실패했습니다.";
-      if (res.ok && json.ok) {
+      if (res.ok && (json.ok || json.savedToHistory)) {
         const desc =
-          json.savedToHistory === false
-            ? "보고 메일은 발송되었으나 이력 저장에 실패했습니다. (DB 마이그레이션 또는 연결 확인)"
+          json.savedToHistory && !json.ok
+            ? `보고서는 저장되었으나 이메일 발송에 실패했습니다: ${json.message}`
             : json.message;
-        toast({ title: "보고 발송 완료", description: desc });
+
+        toast({
+          title: json.ok ? "보고 발송 완료" : "보고서 저장 완료 (메일 실패)",
+          description: desc,
+          variant: json.ok ? "default" : "destructive", // 메일 실패 시 주의 표시
+        });
         router.push("/reports");
       } else if (json.error === "AI_ANALYSIS_TIMEOUT") {
         setShowAiTimeoutSheet(true);

@@ -118,149 +118,149 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       }
 
       const supabase = getSupabase(c);
-    const advResult = await getAdvertiserById(supabase, payload.advertiserId);
-    if (!advResult.ok) {
-      return c.json({
-        ok: false,
-        error: "ADVERTISER_NOT_FOUND",
-        message: "광고주를 찾을 수 없습니다.",
-      }, 404);
-    }
-    const adv = advResult.data;
+      const advResult = await getAdvertiserById(supabase, payload.advertiserId);
+      if (!advResult.ok) {
+        return c.json({
+          ok: false,
+          error: "ADVERTISER_NOT_FOUND",
+          message: "광고주를 찾을 수 없습니다.",
+        }, 404);
+      }
+      const adv = advResult.data;
 
-    const dateStr = payload.dateStr ?? new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const dateStr = payload.dateStr ?? new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
-    let pptAttachment: { filename: string; buffer: Buffer } | undefined;
-    if (payload.includePpt && payload.station && payload.line) {
-      const flowResult = await fetchStationFlow(payload.station, payload.line);
-      if (flowResult.ok) {
-        const displayDays = payload.displayDays ?? 7;
-        const exposure = calculateExposure({
-          flowData: flowResult.data,
-          displayDays,
-        });
-        try {
-          const imageBase64s = payload.zipBase64
-            ? await extractImageBase64sFromZip(payload.zipBase64)
-            : undefined;
-          const pptBuffer = await generateReportPpt({
-            advertiserName: payload.advertiserName ?? adv.name,
-            station: payload.station,
-            line: payload.line,
+      let pptAttachment: { filename: string; buffer: Buffer } | undefined;
+      if (payload.includePpt && payload.station && payload.line) {
+        const flowResult = await fetchStationFlow(payload.station, payload.line);
+        if (flowResult.ok) {
+          const displayDays = payload.displayDays ?? 7;
+          const exposure = calculateExposure({
+            flowData: flowResult.data,
             displayDays,
-            exposure,
-            imageBase64s: imageBase64s?.length ? imageBase64s : undefined,
-            subtitle: payload.userEnteredName ?? undefined,
-            dateStr,
-            campaignManagerName: adv.campaignManagerName ?? undefined,
-            campaignManagerEmail: adv.campaignManagerEmail ?? undefined,
           });
-          const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
-          const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
-          pptAttachment = {
-            filename: `노출량보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pptx`,
-            buffer: pptBuffer,
-          };
-        } catch (pptErr) {
-          console.error("[capture/report] PPT 생성 실패:", pptErr);
+          try {
+            const imageBase64s = payload.zipBase64
+              ? await extractImageBase64sFromZip(payload.zipBase64)
+              : undefined;
+            const pptBuffer = await generateReportPpt({
+              advertiserName: payload.advertiserName ?? adv.name,
+              station: payload.station,
+              line: payload.line,
+              displayDays,
+              exposure,
+              imageBase64s: imageBase64s?.length ? imageBase64s : undefined,
+              subtitle: payload.userEnteredName ?? undefined,
+              dateStr,
+              campaignManagerName: adv.campaignManagerName ?? undefined,
+              campaignManagerEmail: adv.campaignManagerEmail ?? undefined,
+            });
+            const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
+            const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
+            pptAttachment = {
+              filename: `노출량보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pptx`,
+              buffer: pptBuffer,
+            };
+          } catch (pptErr) {
+            console.error("[capture/report] PPT 생성 실패:", pptErr);
+          }
         }
       }
-    }
 
 
-    const sentToEmail =
-      payload.primaryRecipient === "advertiser" ? adv.email : adv.campaignManagerEmail;
+      const sentToEmail =
+        payload.primaryRecipient === "advertiser" ? adv.email : adv.campaignManagerEmail;
 
-    /** Gemini 호출 타임아웃(ms). 서버리스 60초 한도 내에서 DB·이메일까지 여유 두고 최대한 대기. */
-    const AI_ANALYSIS_TIMEOUT_MS = 55_000;
-    let aiAnalysisData: AiAnalysisResult | null = null;
-    if (payload.station && payload.line && payload.advertiserName && !payload.skipAiAnalysis) {
-      try {
-        aiAnalysisData = await Promise.race([
-          generateAiAnalysis({
-            station: payload.station,
-            line: payload.line,
-            advertiserName: payload.advertiserName,
-            dateStr,
-          }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("AI_ANALYSIS_TIMEOUT")), AI_ANALYSIS_TIMEOUT_MS)
-          ),
-        ]);
-      } catch (e) {
-        const isTimeout = e instanceof Error && e.message === "AI_ANALYSIS_TIMEOUT";
-        if (isTimeout) {
-          return c.json(
-            {
-              ok: false,
-              error: "AI_ANALYSIS_TIMEOUT",
-              message: "AI 성과 분석 생성이 시간 초과되었습니다. 다시 시도하거나 AI 분석 없이 발송할 수 있습니다.",
-            },
-            200
-          );
+      /** Gemini 호출 타임아웃(ms). Vercel Pro(5분) 환경이므로 3분까지 대기. */
+      const AI_ANALYSIS_TIMEOUT_MS = 180_000;
+      let aiAnalysisData: AiAnalysisResult | null = null;
+      if (payload.station && payload.line && payload.advertiserName && !payload.skipAiAnalysis) {
+        try {
+          aiAnalysisData = await Promise.race([
+            generateAiAnalysis({
+              station: payload.station,
+              line: payload.line,
+              advertiserName: payload.advertiserName,
+              dateStr,
+            }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("AI_ANALYSIS_TIMEOUT")), AI_ANALYSIS_TIMEOUT_MS)
+            ),
+          ]);
+        } catch (e) {
+          const isTimeout = e instanceof Error && e.message === "AI_ANALYSIS_TIMEOUT";
+          if (isTimeout) {
+            return c.json(
+              {
+                ok: false,
+                error: "AI_ANALYSIS_TIMEOUT",
+                message: "AI 성과 분석 생성이 시간 초과되었습니다. 다시 시도하거나 AI 분석 없이 발송할 수 있습니다.",
+              },
+              200
+            );
+          }
+          console.error("[capture/report] AI Analysis failed:", e);
+          aiAnalysisData = null;
         }
-        console.error("[capture/report] AI Analysis failed:", e);
-        aiAnalysisData = null;
       }
-    }
 
-    const { data: insertedReport, error: insertErr } = await supabase.from("vision_ocr_reports").insert({
-      advertiser_id: payload.advertiserId,
-      advertiser_name: payload.advertiserName ?? adv.name,
-      station: payload.station ?? null,
-      line: payload.line ?? null,
-      location_label: payload.locationLabel ?? payload.userEnteredName ?? null,
-      image_count: payload.imageCount ?? null,
-      sent_to_email: sentToEmail ?? null,
-      ai_analysis: aiAnalysisData,
-    }).select().single();
+      const { data: insertedReport, error: insertErr } = await supabase.from("vision_ocr_reports").insert({
+        advertiser_id: payload.advertiserId,
+        advertiser_name: payload.advertiserName ?? adv.name,
+        station: payload.station ?? null,
+        line: payload.line ?? null,
+        location_label: payload.locationLabel ?? payload.userEnteredName ?? null,
+        image_count: payload.imageCount ?? null,
+        sent_to_email: sentToEmail ?? null,
+        ai_analysis: aiAnalysisData,
+      }).select().single();
 
-    if (insertErr || !insertedReport) {
-      console.error("[capture/report] vision_ocr_reports insert failed:", insertErr);
+      if (insertErr || !insertedReport) {
+        console.error("[capture/report] vision_ocr_reports insert failed:", insertErr);
+        return c.json({
+          ok: false,
+          error: "DB_INSERT_FAILED",
+          message: "리포트 저장 중 오류가 발생했습니다.",
+        }, 500);
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const reportUrl = `${baseUrl}/reports/analysis/${insertedReport.id}`;
+
+      const result = await sendReportEmail({
+        primaryRecipient: payload.primaryRecipient as "advertiser" | "campaign",
+        senderNameOption: payload.senderNameOption as "user" | "campaign",
+        advertiserEmail: adv.email,
+        campaignManagerEmail: adv.campaignManagerEmail,
+        campaignManagerName: adv.campaignManagerName,
+        loginUserName: payload.loginUserName ?? "",
+        advertiserName: payload.advertiserName ?? adv.name,
+        line: payload.line ?? "",
+        station: payload.station ?? "",
+        userEnteredName: payload.userEnteredName ?? "",
+        dateStr,
+        zipBase64: payload.zipBase64,
+        zipFilename: payload.zipFilename,
+        pptAttachment,
+        reportUrl,
+      });
+
+      if (!result.ok) {
+        // 이메일 발송 실패 시... 로그만 남기고 일단 성공 처리? 아니면 에러 리턴?
+        // 사용자는 "발송 실패"로 알아야 함.
+        return c.json({
+          ok: false,
+          error: "EMAIL_SEND_FAILED",
+          message: result.error ?? "이메일 발송에 실패했습니다. (DB에는 저장됨)",
+          savedToHistory: true,
+        }, 200); // 클라이언트가 '성공(저장됨)'으로 처리하고 리다이렉트할 수 있도록 200 반환
+      }
+
       return c.json({
-        ok: false,
-        error: "DB_INSERT_FAILED",
-        message: "리포트 저장 중 오류가 발생했습니다.",
-      }, 500);
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const reportUrl = `${baseUrl}/reports/analysis/${insertedReport.id}`;
-
-    const result = await sendReportEmail({
-      primaryRecipient: payload.primaryRecipient as "advertiser" | "campaign",
-      senderNameOption: payload.senderNameOption as "user" | "campaign",
-      advertiserEmail: adv.email,
-      campaignManagerEmail: adv.campaignManagerEmail,
-      campaignManagerName: adv.campaignManagerName,
-      loginUserName: payload.loginUserName ?? "",
-      advertiserName: payload.advertiserName ?? adv.name,
-      line: payload.line ?? "",
-      station: payload.station ?? "",
-      userEnteredName: payload.userEnteredName ?? "",
-      dateStr,
-      zipBase64: payload.zipBase64,
-      zipFilename: payload.zipFilename,
-      pptAttachment,
-      reportUrl,
-    });
-
-    if (!result.ok) {
-      // 이메일 발송 실패 시... 로그만 남기고 일단 성공 처리? 아니면 에러 리턴?
-      // 사용자는 "발송 실패"로 알아야 함.
-      return c.json({
-        ok: false,
-        error: "EMAIL_SEND_FAILED",
-        message: result.error ?? "이메일 발송에 실패했습니다. (DB에는 저장됨)",
+        ok: true,
+        message: "보고 메일이 발송되었습니다.",
         savedToHistory: true,
-      }, 500);
-    }
-
-    return c.json({
-      ok: true,
-      message: "보고 메일이 발송되었습니다.",
-      savedToHistory: true,
-    });
+      });
     } catch (err) {
       console.error("[capture/report] Unhandled error:", err);
       const message = err instanceof Error ? err.message : "서버 오류가 발생했습니다.";
