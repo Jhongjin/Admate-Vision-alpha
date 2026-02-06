@@ -304,9 +304,23 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
               .eq("id", insertedReport.id);
           }
         }
-      } catch (uploadOrUpdateErr) {
+      } catch (uploadOrUpdateErr: any) {
         console.error("[capture/report] Image upload/update failed:", uploadOrUpdateErr);
-        // 에러가 나도 메일 발송은 계속 진행 (이미지가 웹에서 안 보일 뿐)
+        // 에러 내용을 DB에 저장하여 프론트엔드에서 확인 가능하게 함
+        if (insertedReport && aiAnalysisData) {
+          const errorMsg = uploadOrUpdateErr instanceof Error ? uploadOrUpdateErr.message : String(uploadOrUpdateErr);
+          const debugData = {
+            ...aiAnalysisData,
+            debug_error: {
+              message: "Image Upload Failed",
+              details: errorMsg,
+              check: "Check Vercel Logs or Storage Permissions"
+            }
+          };
+          await supabase.from("vision_ocr_reports")
+            .update({ ai_analysis: debugData })
+            .eq("id", insertedReport.id);
+        }
       }
 
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://vision-ooh.admate.ai.kr");

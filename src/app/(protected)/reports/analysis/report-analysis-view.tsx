@@ -127,6 +127,14 @@ export function ReportAnalysisView({
           <p className="text-lg text-slate-500">
             {report.advertiser_name} | {formattedDate} 발행
           </p>
+          {(ai_analysis as any).debug_error && (
+            <div className="mx-auto mt-4 max-w-2xl rounded-md bg-red-50 p-4 text-left border border-red-200">
+              <h3 className="text-sm font-medium text-red-800">Debug Error (이미지 업로드 실패 원인)</h3>
+              <pre className="mt-1 whitespace-pre-wrap text-xs text-red-700 font-mono">
+                {JSON.stringify((ai_analysis as any).debug_error, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -317,9 +325,9 @@ export function ReportAnalysisView({
             </CardHeader>
             <CardContent>
               <div className={`grid gap-4 ${(!report.image_urls || report.image_urls.length <= 1) ? 'grid-cols-1' :
-                  report.image_urls.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                    report.image_urls.length === 3 ? 'grid-cols-1 md:grid-cols-2' :
-                      'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                report.image_urls.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                  report.image_urls.length === 3 ? 'grid-cols-1 md:grid-cols-2' :
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                 }`}>
                 {(report.image_urls && report.image_urls.length > 0) ? (
                   report.image_urls.map((url, idx) => (
