@@ -115,8 +115,7 @@ export default function CaptureConfirmPage() {
   const [reportSending, setReportSending] = useState(false);
   /** AI 성과 분석 타임아웃 시 선택 시트 (다시 시도 / AI 없이 발송) */
   const [showAiTimeoutSheet, setShowAiTimeoutSheet] = useState(false);
-  const [includePpt, setIncludePpt] = useState(false);
-  /** 게재 기간(일). 0이면 빈 칸(미입력), 발송 시 0/미입력이면 7일로 전달 */
+  /** 게재 기간(일). 0이면 빈 칸(미입력), 발송 시 0/미입력이면 7일로 전달. 'AI 보고서 보내기' 시 이메일에 리포트 링크 포함 시 사용 */
   const [displayDays, setDisplayDays] = useState(7);
   const router = useRouter();
   const { toast } = useToast();
@@ -369,10 +368,6 @@ export default function CaptureConfirmPage() {
     hasResolvedStation
   );
 
-  useEffect(() => {
-    if (!canUsePpt && includePpt) setIncludePpt(false);
-  }, [canUsePpt, includePpt]);
-
   const singleCapturedAt = data?.capturedAt ?? data?.locationCapturedAt;
   const capturedAtText = singleCapturedAt
     ? format(new Date(singleCapturedAt), "yyyy-MM-dd HH:mm")
@@ -615,8 +610,8 @@ export default function CaptureConfirmPage() {
             dateStr: metaForFilename?.dateStr ?? format(new Date(), "yyyyMMdd"),
             zipBase64,
             zipFilename,
-            includePpt: includePpt || undefined,
-            displayDays: includePpt ? (displayDays && displayDays >= 1 ? displayDays : 7) : undefined,
+            includePpt: skipAiAnalysis ? undefined : (canUsePpt ? true : undefined),
+            displayDays: skipAiAnalysis ? undefined : (canUsePpt ? (displayDays && displayDays >= 1 ? displayDays : 7) : undefined),
             skipAiAnalysis: skipAiAnalysis === true ? true : undefined,
           }),
           signal: controller.signal,
@@ -691,7 +686,7 @@ export default function CaptureConfirmPage() {
     profile?.name,
     toast,
     router,
-    includePpt,
+    canUsePpt,
     displayDays,
   ]);
 
@@ -1082,19 +1077,7 @@ export default function CaptureConfirmPage() {
               className="flex flex-wrap items-center gap-4 pt-4 mt-4 border-t-2 border-slate-200 bg-slate-50/80 rounded-lg px-4 py-3"
               data-report-ppt-section
             >
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="include-ppt"
-                  checked={includePpt}
-                  onCheckedChange={(v) => setIncludePpt(v === true)}
-                  disabled={!canUsePpt}
-                  className="border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                />
-                <Label htmlFor="include-ppt" className="text-sm font-medium text-gray-900 cursor-pointer">
-                  AI 성과 분석 리포트 생성 (이메일에 링크 포함)
-                </Label>
-              </div>
-              {includePpt && (
+              {canUsePpt ? (
                 <div className="flex items-center gap-2">
                   <Label htmlFor="display-days" className="text-xs text-slate-700">게재 기간(일)</Label>
                   <Input
@@ -1116,10 +1099,9 @@ export default function CaptureConfirmPage() {
                     className="h-9 w-20 border-slate-300 bg-white text-gray-900"
                   />
                 </div>
-              )}
-              {!canUsePpt && (
+              ) : (
                 <p className="w-full text-xs text-slate-500">
-                  역명·호선과 광고주가 모두 인식된 위치 세션에서만 사용 가능합니다. (위치 없음 세션에서는 사용 불가)
+                  역명·호선과 광고주가 모두 인식된 위치 세션에서만 AI 보고서 링크가 이메일에 포함됩니다. (위치 없음 세션에서는 사진만 발송)
                 </p>
               )}
             </div>
@@ -1150,7 +1132,7 @@ export default function CaptureConfirmPage() {
             onClick={() => void handleSendReport(true)}
           >
             <FileImage className="h-4 w-4" />
-            사진만 (보고서 X)
+            사진만 보내기
           </Button>
           <Button asChild variant="outline" size="lg">
             <Link href="/reports">보고 목록</Link>
