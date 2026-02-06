@@ -11,16 +11,22 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
 import { BRAND } from "@/constants/brand";
 import { signupApi, extractApiErrorMessage } from "@/features/auth/api";
-import { setRegisteredEmail } from "@/lib/registered-email";
 import { useToast } from "@/hooks/use-toast";
+
+const SIGNUP_EMAIL_DOMAIN = "@nasmedia.co.kr";
 
 const DUPLICATE_EMAIL_MESSAGE =
   "이미 가입된 이메일입니다. 로그인을 이용해 주세요.";
 
+function toFullEmail(id: string): string {
+  const trimmed = id.trim().toLowerCase();
+  return trimmed ? `${trimmed}${SIGNUP_EMAIL_DOMAIN}` : "";
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [formState, setFormState] = useState({ name: "", email: "" });
+  const [formState, setFormState] = useState({ name: "", emailId: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateEmailMessage, setDuplicateEmailMessage] = useState<string | null>(null);
 
@@ -36,17 +42,20 @@ export default function SignupPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (!formState.name.trim() || !formState.email.trim()) return;
+      const fullEmail = toFullEmail(formState.emailId);
+      if (!formState.name.trim() || !fullEmail) return;
       setIsSubmitting(true);
       setDuplicateEmailMessage(null);
       try {
-        const user = await signupApi({
+        await signupApi({
           name: formState.name.trim(),
-          email: formState.email.trim(),
+          email: fullEmail,
         });
-        setRegisteredEmail(user.email);
-        toast({ title: "회원가입 완료", description: `${user.name}님, 환영합니다.` });
-        router.replace("/capture");
+        toast({
+          title: "가입 완료",
+          description: `${fullEmail} 주소로 인증 메일을 보냈습니다. 메일의 링크를 클릭한 뒤 로그인해 주세요.`,
+        });
+        router.replace("/login");
       } catch (err) {
         const isDuplicate =
           isAxiosError(err) && err.response?.status === 409;
@@ -63,7 +72,7 @@ export default function SignupPage() {
         setIsSubmitting(false);
       }
     },
-    [formState.name, formState.email, router, toast]
+    [formState.name, formState.emailId, router, toast]
   );
 
   return (
@@ -77,7 +86,7 @@ export default function SignupPage() {
               Sign Up
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              이름과 이메일만 입력하면 즉시 시작할 수 있습니다.
+              이름과 아이디를 입력하면 가입 이메일로 인증 메일이 발송됩니다.
             </p>
           </div>
 
@@ -101,21 +110,24 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 font-medium">
-                  이메일 (필수)
+                <Label htmlFor="emailId" className="text-slate-700 font-medium">
+                  이메일 아이디 (필수)
                 </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="example@company.com"
-                  value={formState.email}
-                  onChange={handleChange}
-                  required
-                  disabled={isSubmitting}
-                  className="h-12 border-slate-200 bg-white px-4 text-base focus-visible:ring-indigo-500"
-                />
+                <div className="flex h-12 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-base focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-0">
+                  <Input
+                    id="emailId"
+                    name="emailId"
+                    type="text"
+                    autoComplete="username"
+                    placeholder="hong"
+                    value={formState.emailId}
+                    onChange={handleChange}
+                    required
+                    disabled={isSubmitting}
+                    className="h-auto flex-1 border-0 p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <span className="shrink-0 text-slate-500">{SIGNUP_EMAIL_DOMAIN}</span>
+                </div>
               </div>
               <Button
                 type="submit"

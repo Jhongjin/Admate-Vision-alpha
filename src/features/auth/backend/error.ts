@@ -4,6 +4,8 @@ export const authErrorCodes = {
   createError: 'AUTH_CREATE_ERROR',
   validationError: 'AUTH_VALIDATION_ERROR',
   emailAlreadyExists: 'AUTH_EMAIL_ALREADY_EXISTS',
+  emailNotVerified: 'AUTH_EMAIL_NOT_VERIFIED',
+  verificationTokenInvalid: 'AUTH_VERIFICATION_TOKEN_INVALID',
   serviceUnavailable: 'AUTH_SERVICE_UNAVAILABLE',
 } as const;
 

@@ -1,53 +1,65 @@
 import { ImageResponse } from "next/og";
 
-// Route segment config
 export const runtime = "edge";
 
-// Image metadata
-export const size = {
-    width: 32,
-    height: 32,
-};
+export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-// Image generation
 export default function Icon() {
-    return new ImageResponse(
-        (
-            // ImageResponse JSX element
-            <div
-                style={{
-                    fontSize: 24,
-                    background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    borderRadius: "8px", // Rounded square
-                }}
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          background: "#ffffff",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 32 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient
+              id="avGrad"
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="0%"
             >
-                {/* Simple Eye Symbol */}
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <path d="M2.5 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0" />
-                </svg>
-            </div>
-        ),
-        // ImageResponse options
-        {
-            ...size,
-        }
-    );
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#7c3aed" />
+            </linearGradient>
+          </defs>
+          {/* Lens circle (aperture) */}
+          <circle cx="16" cy="16" r="11" fill="url(#avGrad)" />
+          <circle cx="16" cy="16" r="4" fill="#ffffff" />
+          {/* AV letters */}
+          <text
+            x="16"
+            y="18"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="url(#avGrad)"
+            style={{
+              fontFamily: "system-ui, sans-serif",
+              fontWeight: 800,
+              fontSize: 10,
+              letterSpacing: -0.8,
+            }}
+          >
+            AV
+          </text>
+        </svg>
+      </div>
+    ),
+    { ...size }
+  );
 }

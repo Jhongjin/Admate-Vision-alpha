@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,30 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const verified = searchParams.get("verified");
+    const error = searchParams.get("error");
+    if (verified === "1") {
+      toast({
+        title: "이메일 인증 완료",
+        description: "이제 로그인해 주세요.",
+      });
+      router.replace("/login", { scroll: false });
+    } else if (error === "verification_failed" || error === "invalid_token") {
+      toast({
+        title: "인증 실패",
+        description: "인증 링크가 만료되었거나 올바르지 않습니다. 다시 시도해 주세요.",
+        variant: "destructive",
+      });
+      router.replace("/login", { scroll: false });
+    }
+  }, [searchParams, toast, router]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -71,7 +91,7 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="example@company.com"
+                  placeholder="id@nasmedia.co.kr"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

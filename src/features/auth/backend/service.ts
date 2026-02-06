@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   failure,
@@ -18,8 +19,10 @@ import {
   authErrorCodes,
   type AuthServiceError,
 } from '@/features/auth/backend/error';
+import { sendVerificationEmail } from '@/features/auth/backend/send-verification-email';
 
 const TABLE = 'users';
+const VERIFICATION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24시간
 
 function rowToResponse(row: UserRow): UserResponse {
   return {
@@ -62,9 +65,18 @@ export async function signup(
     );
   }
 
+  const token = randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_MS).toISOString();
+
   const { data, error } = await client
     .from(TABLE)
-    .insert({ name: trimmedName, email: trimmedEmail })
+    .insert({
+      name: trimmedName,
+      email: trimmedEmail,
+      email_verified: false,
+      email_verification_token: token,
+      email_verification_expires_at: expiresAt,
+    })
     .select()
     .single<UserRow>();
 
@@ -79,6 +91,20 @@ export async function signup(
       authErrorCodes.validationError,
       '저장 결과 검증 실패.',
       rowParse.error.format()
+    );
+  }
+
+  const sendResult = await sendVerificationEmail({
+    to: trimmedEmail,
+    token,
+    name: trimmedName,
+  });
+
+  if (!sendResult.ok) {
+    return failure(
+      503,
+      authErrorCodes.serviceUnavailable,
+      '회원가입은 완료되었으나 인증 메일 발송에 실패했습니다. 잠시 후 다시 시도하거나 관리자에게 문의하세요.'
     );
   }
 
@@ -140,7 +166,16 @@ export async function login(
     );
   }
 
-  return success(rowToResponse(rowParse.data));
+  const row = rowParse.data;
+  if (!row.email_verified) {
+    return failure(
+      403,
+      authErrorCodes.emailNotVerified,
+      '이메일 인증을 완료한 뒤 로그인해 주세요. 가입한 이메일로 발송된 인증 링크를 확인해 주세요.'
+    );
+  }
+
+  return success(rowToResponse(row));
 }
 
 export async function getMeByEmail(
@@ -181,4 +216,53 @@ export async function getMeByEmail(
   }
 
   return success(rowToResponse(rowParse.data));
+}
+
+export async function verifyEmail(
+  client: SupabaseClient,
+  token: string
+): Promise<HandlerResult<{ email: string }, AuthServiceError, unknown>> {
+  const trimmed = token.trim();
+  if (!trimmed) {
+    return failure(
+      400,
+      authErrorCodes.validationError,
+      '인증 링크가 올바르지 않습니다.'
+    );
+  }
+
+  const now = new Date().toISOString();
+  const { data, error } = await client
+    .from(TABLE)
+    .select('id, email')
+    .eq('email_verification_token', trimmed)
+    .gt('email_verification_expires_at', now)
+    .maybeSingle<{ id: string; email: string }>();
+
+  if (error) {
+    return failure(500, authErrorCodes.fetchError, error.message);
+  }
+
+  if (!data) {
+    return failure(
+      400,
+      authErrorCodes.verificationTokenInvalid,
+      '인증 링크가 만료되었거나 올바르지 않습니다. 다시 회원가입하거나 인증 메일을 재발송해 주세요.'
+    );
+  }
+
+  const { error: updateError } = await client
+    .from(TABLE)
+    .update({
+      email_verified: true,
+      email_verification_token: null,
+      email_verification_expires_at: null,
+    })
+    .eq('id', data.id);
+
+  if (updateError) {
+    return failure(500, authErrorCodes.createError, updateError.message);
+  }
+
+  return success({ email: data.email });
 }

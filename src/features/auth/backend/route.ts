@@ -10,8 +10,9 @@ import {
   SignupBodySchema,
   LoginBodySchema,
   MeQuerySchema,
+  VerifyEmailQuerySchema,
 } from '@/features/auth/backend/schema';
-import { signup, login, getMeByEmail } from '@/features/auth/backend/service';
+import { signup, login, getMeByEmail, verifyEmail } from '@/features/auth/backend/service';
 import {
   authErrorCodes,
   type AuthServiceError,
@@ -109,5 +110,24 @@ export const registerAuthRoutes = (app: Hono<AppEnv>) => {
       return respond(c, result);
     }
     return respond(c, result);
+  });
+
+  app.get('/auth/verify-email', async (c) => {
+    const token = c.req.query('token');
+    const parsed = VerifyEmailQuerySchema.safeParse({ token: token ?? '' });
+    if (!parsed.success) {
+      return c.redirect('/login?error=invalid_token', 302);
+    }
+    if (isSupabasePlaceholder(getConfig(c))) {
+      return c.redirect('/login?error=service_unavailable', 302);
+    }
+    const supabase = getSupabase(c);
+    const result = await verifyEmail(supabase, parsed.data.token);
+    if (!result.ok) {
+      const err = result as ErrorResult<AuthServiceError, unknown>;
+      getLogger(c).warn('Auth verify-email failed', err.error.message);
+      return c.redirect('/login?error=verification_failed', 302);
+    }
+    return c.redirect('/login?verified=1', 302);
   });
 };
