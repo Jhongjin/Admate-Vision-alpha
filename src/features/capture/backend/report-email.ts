@@ -53,10 +53,21 @@ function safeFilenamePart(s: string): string {
 
 export function buildReportSubject(params: ReportEmailParams): string {
   const { advertiserName, line, station, userEnteredName, dateStr } = params;
+
   const a = safeFilenamePart(advertiserName);
+
+  // 위치(역명)가 없는 경우 깔끔한 제목 사용
+  if (!station || station === "미인식" || station === "") {
+    return `${a}_${dateStr} 게첨 보고서의 건`;
+  }
+
   const l = safeFilenamePart(line);
   const st = safeFilenamePart(station);
   const u = safeFilenamePart(userEnteredName);
+  // userEnteredName이 없거나 '-' 인 경우 생략
+  if (!userEnteredName || userEnteredName === "-") {
+    return `${a}_${l}_${st}_${dateStr} 게첨 보고서의 건`;
+  }
   return `${a}_${l}_${st}_${u}_${dateStr} 게첨 보고서의 건`;
 }
 

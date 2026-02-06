@@ -207,33 +207,34 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
           aiAnalysisData = null;
         }
       }
-      // Generate PDF
+      // Generate PDF (only if station/line provided)
       let pdfAttachment: { filename: string; buffer: Buffer } | undefined;
-      try {
-        const safeStation = payload.station?.replace(/[/\\:*?"<>|]/g, "_").trim() || "역";
-        const safeLine = (payload.line ?? "").replace(/[/\\:*?"<>|]/g, "_").trim() || "호선";
+      if (payload.station && payload.line) {
+        try {
+          const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim();
+          const safeLine = payload.line.replace(/[/\\:*?"<>|]/g, "_").trim();
 
-        const pdfBuffer = await generateReportPdf({
-          advertiserName: payload.advertiserName ?? adv.name,
-          station: payload.station ?? "",
-          line: payload.line ?? "",
-          dateStr,
-          aiAnalysis: aiAnalysisData,
-          imageBase64s: imageBase64s,
-          exposure: exposure ? {
-            totalExposure: exposure.totalExposure,
-            dailyFlow: exposure.dailyFlow,
-          } : undefined,
-        });
+          const pdfBuffer = await generateReportPdf({
+            advertiserName: payload.advertiserName ?? adv.name,
+            station: payload.station,
+            line: payload.line,
+            dateStr,
+            aiAnalysis: aiAnalysisData,
+            imageBase64s: imageBase64s,
+            exposure: exposure ? {
+              totalExposure: exposure.totalExposure,
+              dailyFlow: exposure.dailyFlow,
+            } : undefined,
+          });
 
-        pdfAttachment = {
-          filename: `성과분석보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pdf`,
-          buffer: pdfBuffer,
-        };
-      } catch (pdfErr) {
-        console.error("[capture/report] PDF 생성 실패:", pdfErr);
+          pdfAttachment = {
+            filename: `성과분석보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pdf`,
+            buffer: pdfBuffer,
+          };
+        } catch (pdfErr) {
+          console.error("[capture/report] PDF 생성 실패:", pdfErr);
+        }
       }
-
 
       const { data: insertedReport, error: insertErr } = await supabase.from("vision_ocr_reports").insert({
         advertiser_id: payload.advertiserId,
@@ -320,6 +321,9 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
                 .update({ ai_analysis: fallbackData })
                 .eq("id", insertedReport.id);
             }
+            // If aiAnalysisData is null (Location Skip), just update column. If column fails, we can't update ai_analysis.
+            // But usually location skip implies no AI analysis, so aiAnalysisData is null.
+            // If column update fails here, we just lose images in DB list (but they are in storage).
           }
         }
       } catch (uploadOrUpdateErr: any) {
@@ -342,7 +346,11 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       }
 
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://vision-ooh.admate.ai.kr");
-      const reportUrl = `${baseUrl}/reports/analysis/${insertedReport.id}`;
+
+      // AI 분석(위치정보)이 있는 경우에만 리포트 URL 생성 및 메일 포함
+      const reportUrl = (payload.station && payload.line && insertedReport.ai_analysis)
+        ? `${baseUrl}/reports/analysis/${insertedReport.id}`
+        : undefined;
 
       const result = await sendReportEmail({
         primaryRecipient: payload.primaryRecipient as "advertiser" | "campaign",

@@ -460,7 +460,7 @@ export default function CapturePage() {
           <Button asChild variant="outline" size="lg" className="gap-2 w-full h-12 border-slate-200 text-slate-600 hover:bg-slate-50">
             <Link href="/reports">
               <FileText className="h-5 w-5" />
-              보고서 작성하기
+              보고서 목록
             </Link>
           </Button>
         )}
@@ -505,6 +505,6 @@ export default function CapturePage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-    </div>
+    </div >
   );
 }
