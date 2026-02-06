@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import JSZip from "jszip";
-import { MapPin, Building2, Send, FileImage, Download, Replace, RotateCcw, RotateCw, MapPinOff } from "lucide-react";
+import { MapPin, Building2, Send, FileImage, Download, Replace, RotateCcw, RotateCw, MapPinOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import {
@@ -468,6 +468,39 @@ export default function CaptureConfirmPage() {
     [data, selectedImageIndices, toast]
   );
 
+  const deleteImageAt = useCallback((index: number) => {
+    if (!data?.adImages) return;
+    if (!confirm("정말 이 사진을 삭제하시겠습니까?")) return;
+
+    const nextImages = data.adImages.filter((_, i) => i !== index);
+    const nextData = { ...data, adImages: nextImages };
+
+    setEditedFilenames(prev => prev.filter((_, i) => i !== index));
+    setGeneratedFilenames(prev => prev.filter((_, i) => i !== index));
+
+    setSelectedIndices(prev => {
+      const next = new Set<number>();
+      Array.from(prev).forEach(i => {
+        if (i < index) next.add(i);
+        else if (i > index) next.add(i - 1);
+      });
+      return next;
+    });
+
+    setSelectedImageIndices(prev => {
+      const next = new Set<number>();
+      Array.from(prev).forEach(i => {
+        if (i < index) next.add(i);
+        else if (i > index) next.add(i - 1);
+      });
+      return next;
+    });
+
+    setData(nextData);
+    sessionStorage.setItem(CAPTURE_SESSION_KEY, JSON.stringify(nextData));
+    toast({ description: "사진이 삭제되었습니다." });
+  }, [data, toast]);
+
   const applyBulkReplace = useCallback(
     (target: "all" | "selected") => {
       const find = bulkFind.trim();
@@ -817,6 +850,16 @@ export default function CaptureConfirmPage() {
                       title="오른쪽 90° 회전"
                     >
                       <RotateCw className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="h-7 w-7 rounded-full shadow-sm hover:bg-red-600"
+                      onClick={() => deleteImageAt(i)}
+                      title="사진 삭제"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
