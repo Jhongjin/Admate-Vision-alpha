@@ -5,7 +5,7 @@ export const runtime = "edge";
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { size: string } }
+    { params }: { params: Promise<{ size: string }> }
 ) {
     const sizeParam = (await params).size; // Awaiting params as per Next.js 15+ rules (safe for older too if awaited)
     const sizeInt = parseInt(sizeParam, 10) || 192;
@@ -48,7 +48,9 @@ export async function GET(
         ),
         {
             ...size,
-            contentType: "image/png",
+            headers: {
+                "Content-Type": "image/png",
+            },
         }
     );
 }
