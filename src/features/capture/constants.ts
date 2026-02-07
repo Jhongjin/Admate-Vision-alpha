@@ -32,6 +32,11 @@ export type CaptureSessionData = {
   accuracy?: number;
   /** 단일 촬영 시각 (레거시) */
   capturedAt?: string;
+  /** 촬영 시 인식된 광고주 정보 (재촬영 방지용) */
+  recognizedAdvertiser?: {
+    id: string;
+    name: string;
+  };
 };
 
 /** 세션에 광고물 목록이 있고 (위치 사진 있음 또는 위치 없음 모드) 확인 페이지용인지 */

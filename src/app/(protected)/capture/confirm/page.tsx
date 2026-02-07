@@ -278,47 +278,80 @@ export default function CaptureConfirmPage() {
     }
 
     try {
-      const firstAdUrl = ads[0]?.imageDataUrl;
-      if (firstAdUrl) {
-        runOcr(firstAdUrl)
-          .then((ocrBody) => {
-            const adOcrText = ocrBody.text;
-            const match = matchOcrToAdvertiser(adOcrText, advertiserList);
-            const advertiser = match ? match.advertiserName : FALLBACK.advertiser;
-            setAdvertiserLabel(match ? match.advertiserName : null);
-            setMatchedAdvertiserId(match ? match.advertiserId : null);
-            setMetaForFilename({
-              advertiser,
-              line: resolvedLine,
-              station: resolvedStation,
+      // 1. Check if we already have a recognized advertiser from the capture session
+      if (session.recognizedAdvertiser) {
+        setAdvertiserLabel(session.recognizedAdvertiser.name);
+        setMatchedAdvertiserId(session.recognizedAdvertiser.id);
+        setMetaForFilename({
+          advertiser: session.recognizedAdvertiser.name,
+          line: resolvedLine,
+          station: resolvedStation,
+          dateStr,
+        });
+        const names = ads.map((_, i) =>
+          session.skipLocation
+            ? buildNoLocationFilename(session.recognizedAdvertiser!.name, "", dateStr, i + 1)
+            : buildCaptureFilename(
+              session.recognizedAdvertiser!.name,
+              resolvedLine,
+              resolvedStation,
+              "",
               dateStr,
-            });
-            const names = ads.map((_, i) =>
-              session.skipLocation
-                ? buildNoLocationFilename(advertiser, "", dateStr, i + 1)
-                : buildCaptureFilename(advertiser, resolvedLine, resolvedStation, "", dateStr, i + 1)
-            );
-            setGeneratedFilenames(names);
-          })
-          .catch(() => {
-            const adv = FALLBACK.advertiser;
-            setMatchedAdvertiserId(null);
-            setMetaForFilename({
-              advertiser: adv,
-              line: resolvedLine,
-              station: resolvedStation,
-              dateStr,
-            });
-            setGeneratedFilenames(
-              ads.map((_, i) =>
-                session.skipLocation
-                  ? buildNoLocationFilename(adv, "", dateStr, i + 1)
-                  : buildCaptureFilename(adv, resolvedLine, resolvedStation, "", dateStr, i + 1)
-              )
-            );
-          });
+              i + 1
+            )
+        );
+        setGeneratedFilenames(names);
       } else {
-        setGeneratedFilenames([]);
+        // 2. Fallback: Run OCR on the first image if not recognized
+        const firstAdUrl = ads[0]?.imageDataUrl;
+        if (firstAdUrl) {
+          runOcr(firstAdUrl)
+            .then((ocrBody) => {
+              const adOcrText = ocrBody.text;
+              const match = matchOcrToAdvertiser(adOcrText, advertiserList);
+              const advertiser = match ? match.advertiserName : FALLBACK.advertiser;
+              setAdvertiserLabel(match ? match.advertiserName : null);
+              setMatchedAdvertiserId(match ? match.advertiserId : null);
+              setMetaForFilename({
+                advertiser,
+                line: resolvedLine,
+                station: resolvedStation,
+                dateStr,
+              });
+              const names = ads.map((_, i) =>
+                session.skipLocation
+                  ? buildNoLocationFilename(advertiser, "", dateStr, i + 1)
+                  : buildCaptureFilename(
+                    advertiser,
+                    resolvedLine,
+                    resolvedStation,
+                    "",
+                    dateStr,
+                    i + 1
+                  )
+              );
+              setGeneratedFilenames(names);
+            })
+            .catch(() => {
+              const adv = FALLBACK.advertiser;
+              setMatchedAdvertiserId(null);
+              setMetaForFilename({
+                advertiser: adv,
+                line: resolvedLine,
+                station: resolvedStation,
+                dateStr,
+              });
+              setGeneratedFilenames(
+                ads.map((_, i) =>
+                  session.skipLocation
+                    ? buildNoLocationFilename(adv, "", dateStr, i + 1)
+                    : buildCaptureFilename(adv, resolvedLine, resolvedStation, "", dateStr, i + 1)
+                )
+              );
+            });
+        } else {
+          setGeneratedFilenames([]);
+        }
       }
     } catch {
       setStationName(FALLBACK.station);
@@ -805,6 +838,10 @@ export default function CaptureConfirmPage() {
                   placeholder="예: A구역_전광판"
                   className="h-8 text-sm bg-white"
                 />
+                <div className="flex items-center gap-2 bg-slate-100 p-2 rounded text-[10px] text-slate-500 font-mono overflow-x-auto whitespace-nowrap">
+                  <span className="shrink-0 font-bold">저장 예시:</span>
+                  {editedFilenames[0] || "..."}
+                </div>
                 <Button
                   variant="secondary"
                   size="sm"

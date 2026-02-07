@@ -117,6 +117,8 @@ export default function CapturePage() {
   // Flash & Camera Flip (Mock states for UI)
   const [flashOn, setFlashOn] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [recognizedAdvertiser, setRecognizedAdvertiser] = useState<{ id: string; name: string } | undefined>(undefined);
+
 
   const AD_MAX = 10;
   // If location is skipped, we are effectively always in ad mode logic-wise, 
@@ -303,6 +305,7 @@ export default function CapturePage() {
       const text = await runOcr(imageDataUrl);
       const match = matchOcrToAdvertiser(text, advertisers);
       if (match) {
+        setRecognizedAdvertiser({ id: match.advertiserId, name: match.advertiserName });
         addCapturedImage(imageDataUrl);
         toast({ description: `${match.advertiserName} 광고주 인식됨!` });
       } else {
@@ -358,6 +361,7 @@ export default function CapturePage() {
       lat: isCachedFresh ? cached!.lat : undefined,
       lng: isCachedFresh ? cached!.lng : undefined,
       accuracy: isCachedFresh ? cached!.accuracy : undefined,
+      recognizedAdvertiser,
     };
     const totalImages = adImages.length + (locationImage ? 1 : 0);
     if (totalImages >= SESSION_STORAGE_WARN_IMAGE_COUNT) {
