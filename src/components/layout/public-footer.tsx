@@ -107,7 +107,7 @@ export function PublicFooter() {
         {/* Copyright */}
         <div className="mt-8 border-t border-slate-200 pt-6">
           <p className="text-center text-xs text-slate-500">
-            © Kt Nasmedia {new Date().getFullYear()} {BRAND.name}. All rights reserved.
+            © {new Date().getFullYear()} Kt Nasmedia {BRAND.name}. All rights reserved.
           </p>
         </div>
       </div>

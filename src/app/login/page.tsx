@@ -53,7 +53,7 @@ export default function LoginPage() {
       try {
         const user = await loginApi({ email: fullEmail });
         setRegisteredEmail(user.email, { keepLoggedIn });
-        toast({ title: "로그인 완료", description: `${user.name}님, 환영합니다.` });
+        toast({ title: "로그인 완료", description: `${user.name}님, 환영합니다.`, duration: 2000 });
         router.replace("/capture");
       } catch (err) {
         toast({

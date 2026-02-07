@@ -186,6 +186,7 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
               line: payload.line,
               advertiserName: payload.advertiserName,
               dateStr,
+              dailyTraffic: exposure?.dailyFlow,
             }),
             new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error("AI_ANALYSIS_TIMEOUT")), AI_ANALYSIS_TIMEOUT_MS)

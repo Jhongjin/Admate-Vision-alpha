@@ -38,6 +38,13 @@ import {
   isLocationAdSession,
   type CaptureSessionData,
 } from "@/features/capture/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { buildCaptureFilename, sanitizeFilenamePart } from "@/features/capture/lib/capture-filename";
 import { useAdvertisers } from "@/features/advertisers/hooks/useAdvertisers";
 import { useUserProfile } from "@/features/auth/hooks/useUserProfile";
@@ -866,19 +873,38 @@ export default function CaptureConfirmPage() {
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 basis-1/2">
                   <Label className="text-xs text-slate-500">수신자</Label>
-                  <select
+                  <Select
                     value={primaryRecipient}
-                    onChange={(e) => setPrimaryRecipient(e.target.value as any)}
-                    className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                    onValueChange={(val) => setPrimaryRecipient(val as "advertiser" | "campaign")}
                   >
-                    <option value="campaign">캠페인 담당자 (참조: 공란)</option>
-                    <option value="advertiser">광고주 담당자 (참조: 캠페인)</option>
-                  </select>
+                    <SelectTrigger className="w-full h-9 bg-white">
+                      <SelectValue placeholder="수신자 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="campaign">캠페인 담당자 (참조: 공란)</SelectItem>
+                      <SelectItem value="advertiser">광고주 담당자 (참조: 캠페인)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 basis-1/2">
+                  <Label className="text-xs text-slate-500">발신자 표시</Label>
+                  <Select
+                    value={senderNameOption}
+                    onValueChange={(val) => setSenderNameOption(val as "user" | "campaign")}
+                  >
+                    <SelectTrigger className="w-full h-9 bg-white">
+                      <SelectValue placeholder="발신자 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">{profile?.name || "사용자"} (직접 발송)</SelectItem>
+                      <SelectItem value="campaign">AdMate 캠페인팀 (대리 발송)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-slate-500">게재 기간 (PPT 표시)</Label>
+                  <Label className="text-xs text-slate-500">게재 기간 (PDF 표시)</Label>
                   <Input
                     type="number"
                     value={displayDays}
