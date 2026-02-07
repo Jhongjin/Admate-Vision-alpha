@@ -29,7 +29,7 @@ export function ProtectedHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 safe-area-padding-x">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 safe-area-padding-x">
       <div className="container flex h-14 min-h-[48px] items-center justify-between gap-2">
         <Link
           href="/"

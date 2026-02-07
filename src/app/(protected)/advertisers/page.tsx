@@ -201,7 +201,7 @@ export default function AdvertisersPage() {
       )}
 
       {!isLoading && !error && advertisers && advertisers.length > 0 && (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAdvertisers.length === 0 ? (
             <div className="col-span-full">
               <Card className="border-slate-100 bg-white shadow-sm">

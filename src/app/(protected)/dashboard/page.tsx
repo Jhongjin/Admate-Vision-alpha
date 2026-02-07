@@ -83,7 +83,7 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <section className="mb-10 grid gap-6 sm:grid-cols-2">
+      <section className="mb-10 grid gap-6 md:grid-cols-2">
         {/* 오늘 발송 건수 */}
         <Card className="border-slate-100 bg-white shadow-sm transition-all hover:shadow-md relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
