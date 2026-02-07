@@ -20,6 +20,7 @@ type ReportRow = {
   image_count: number | null;
   sent_at: string;
   sent_to_email: string | null;
+  image_urls?: string[];
 };
 
 function formatSentAt(iso: string): string {
@@ -111,6 +112,7 @@ export default function ReportsPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
                 <tr>
+                  <th className="px-6 py-4 whitespace-nowrap text-center">사진</th>
                   <th className="px-6 py-4 whitespace-nowrap">광고주</th>
                   <th className="px-6 py-4 whitespace-nowrap">위치 / 노선</th>
                   <th className="px-6 py-4 whitespace-nowrap">발송 상태</th>
@@ -121,6 +123,17 @@ export default function ReportsPage() {
               <tbody className="divide-y divide-slate-100">
                 {reports.map((report) => (
                   <tr key={report.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap w-[100px] text-center">
+                      <div className="h-12 w-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden mx-auto">
+                        {report.image_urls && report.image_urls.length > 0 ? (
+                          <img src={report.image_urls[0]} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-slate-300">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-semibold text-slate-900">{report.advertiser_name}</div>
                       <div className="text-xs text-slate-500 mt-1">이미지 {report.image_count ?? 0}장</div>

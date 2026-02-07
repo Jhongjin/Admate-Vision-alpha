@@ -214,8 +214,13 @@ export default function AdvertisersPage() {
             filteredAdvertisers.map((adv) => (
               <li key={adv.id}>
                 <Card className="h-full border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-100 group">
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                    <h2 className="text-lg font-bold text-slate-900 line-clamp-1" title={adv.name}>{adv.name}</h2>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
+                        {adv.name.charAt(0)}
+                      </div>
+                      <h2 className="text-lg font-bold text-slate-900 line-clamp-1" title={adv.name}>{adv.name}</h2>
+                    </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-600">
