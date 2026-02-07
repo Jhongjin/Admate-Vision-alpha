@@ -79,12 +79,12 @@ export default function Home() {
               </div>
               <video
                 ref={videoRef}
-                src="/hero.mp4"
+                src="/mv/Nsquare_hero_movie_v2.mp4"
                 autoPlay
                 muted={isMuted}
                 loop
                 playsInline
-                className="absolute inset-0 h-full w-full object-cover opacity-90 mix-blend-normal transition-opacity duration-500 ease-in-out"
+                className="absolute inset-0 h-full w-full scale-[1.12] object-cover opacity-90 mix-blend-normal transition-opacity duration-500 ease-in-out"
                 aria-label="옥외 광고 시연 영상"
               />
 
