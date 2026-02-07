@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, AlertCircle, MapPin, FileText, MapPinOff } from "lucide-react";
+import {
+  ChevronLeft,
+  MapPinOff,
+  Zap,
+  ZapOff,
+  SwitchCamera,
+  Layers,
+  FileText
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   CAPTURE_SESSION_KEY,
@@ -24,6 +32,10 @@ import {
 import { extractTextFromImage } from "@/features/capture/lib/ocr";
 import { compressDataUrl } from "@/features/capture/lib/compress-dataurl";
 import { useToast } from "@/hooks/use-toast";
+import { CameraModeSwitcher } from "@/components/ui/camera-mode-switcher";
+import { ShutterButton } from "@/components/ui/shutter-button";
+import { cn } from "@/lib/utils";
+// import { AnimatePresence, motion } from "framer-motion"; // Removed as requested to avoid issues if setup is missing
 
 class OcrRateLimitError extends Error {
   constructor(message: string) {
@@ -60,6 +72,7 @@ const GPS_MAX_AGE_MS = 30_000;
 const GPS_HIGH_ACCURACY = false;
 
 type GpsStatus = "idle" | "loading" | "ready" | "error" | "unsupported";
+type CameraMode = "location" | "ad";
 
 export default function CapturePage() {
   const router = useRouter();
@@ -73,8 +86,7 @@ export default function CapturePage() {
   } | null>(null);
   const {
     data: advertisersList,
-    isLoading: advertisersLoading,
-    isError: advertisersError,
+    // isLoading: advertisersLoading, 
   } = useAdvertisers();
   /** 광고주 매칭은 Supabase(API) 목록만 사용 */
   const advertisers = (advertisersList ?? []) as Parameters<typeof matchOcrToAdvertiser>[1];
@@ -85,7 +97,12 @@ export default function CapturePage() {
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
+
+  // Camera Mode State
+  const [mode, setMode] = useState<CameraMode>("location");
+
   /** 위치(지하철 역명) 사진 1장 */
   const [locationImage, setLocationImage] = useState<string | null>(null);
   /** 위치 없이 광고만 촬영 모드 */
@@ -97,9 +114,20 @@ export default function CapturePage() {
   /** 매칭 실패한 이미지 (일단 저장 시 adImages에 추가) */
   const [pendingNoMatchImage, setPendingNoMatchImage] = useState<string | null>(null);
 
+  // Flash & Camera Flip (Mock states for UI)
+  const [flashOn, setFlashOn] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+
   const AD_MAX = 10;
-  const isAdMode = locationImage != null || skipLocation;
-  const canFinish = isAdMode && adImages.length >= 1;
+  // If location is skipped, we are effectively always in ad mode logic-wise, 
+  // but UI might still show "ad" mode.
+  // const isAdMode = locationImage != null || skipLocation; 
+  const canFinish = (locationImage != null || skipLocation) && adImages.length >= 1;
+
+  // Last captured image for thumbnail
+  const lastCapturedImage = adImages.length > 0
+    ? adImages[adImages.length - 1].imageDataUrl
+    : (locationImage ?? null);
 
   const startCamera = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -113,7 +141,7 @@ export default function CapturePage() {
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
+          video: { facingMode: { ideal: facingMode } },
           audio: false,
         });
       } catch {
@@ -134,7 +162,7 @@ export default function CapturePage() {
       );
       setStatus("error");
     }
-  }, []);
+  }, [facingMode]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -188,26 +216,64 @@ export default function CapturePage() {
     );
   }, [status]);
 
+  // Sync internal Mode state with logical state
+  useEffect(() => {
+    if (skipLocation) {
+      setMode("ad");
+    } else if (locationImage) {
+      setMode("ad");
+    } else {
+      setMode("location");
+    }
+  }, [locationImage, skipLocation]);
+
+  // Handler for user switching modes manually
+  const handleModeSwitch = (newMode: CameraMode) => {
+    if (newMode === "location") {
+      if (skipLocation) {
+        setSkipLocation(false);
+      }
+      // If we have a location image, user might want to retake it.
+      // We act as if we are just viewing. Actual retake logic is in capture.
+    }
+    setMode(newMode);
+  };
+
   const addCapturedImage = useCallback(
     (imageDataUrl: string) => {
       const now = new Date().toISOString();
-      if (!skipLocation && locationImage == null) {
+      // Logic: If in Location Mode (and not skipped), save as location image.
+      // If in Ad Mode, save as ad image.
+
+      if (mode === "location") {
         setLocationImage(imageDataUrl);
+        setSkipLocation(false);
+        setMode("ad"); // Auto-switch to Ad mode after location capture
+        toast({ description: "위치(역명) 사진이 촬영되었습니다. 이제 광고를 촬영하세요." });
         return;
       }
-      if (adImages.length >= AD_MAX) return;
+
+      if (adImages.length >= AD_MAX) {
+        toast({ title: "촬영 한도 초과", description: "최대 10장까지만 촬영할 수 있습니다.", variant: "destructive" });
+        return;
+      }
+
       setAdImages((prev) => [
         ...prev,
         { imageDataUrl, capturedAt: now },
       ]);
+      // Toast feedback
+      // toast({ description: `광고 ${adImages.length + 1}장 저장됨` }); // Removed to avoid clutter, using visual cue instead
     },
-    [skipLocation, locationImage, adImages.length]
+    [mode, adImages.length, toast]
   );
 
   const handleCapture = useCallback(async () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
-    setIsCapturing(true);
+
+    setIsCapturing(true); // Trigger shutter animation/processing state
+
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -216,22 +282,29 @@ export default function CapturePage() {
       setIsCapturing(false);
       return;
     }
+    // Flip if using user facing camera
+    if (facingMode === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0);
     const rawDataUrl = canvas.toDataURL("image/jpeg", 0.85);
     const imageDataUrl = await compressDataUrl(rawDataUrl);
 
-    if (!isAdMode) {
+    // If Location Mode, just save.
+    if (mode === "location") {
       addCapturedImage(imageDataUrl);
       setIsCapturing(false);
       return;
     }
 
+    // Ad Mode: Run OCR
     try {
       const text = await runOcr(imageDataUrl);
       const match = matchOcrToAdvertiser(text, advertisers);
       if (match) {
         addCapturedImage(imageDataUrl);
-        toast({ description: `${match.advertiserName} 광고주로 인식됨` });
+        toast({ description: `${match.advertiserName} 광고주 인식됨!` });
       } else {
         setPendingNoMatchImage(imageDataUrl);
         setShowNoAdvertiserSheet(true);
@@ -250,14 +323,27 @@ export default function CapturePage() {
     } finally {
       setIsCapturing(false);
     }
-  }, [addCapturedImage, isAdMode, advertisers, toast]);
+  }, [addCapturedImage, mode, advertisers, toast, facingMode]);
 
-  const handleSkipLocation = useCallback(() => {
-    setSkipLocation(true);
-  }, []);
+  const toggleSkipLocation = useCallback(() => {
+    if (skipLocation) {
+      setSkipLocation(false);
+      setMode("location");
+      toast({ description: "위치 촬영 모드로 전환합니다." });
+    } else {
+      setSkipLocation(true);
+      setMode("ad");
+      toast({ description: "위치 없이 광고 촬영을 시작합니다." });
+    }
+  }, [skipLocation, toast]);
 
   const saveSessionAndGoToConfirm = useCallback(() => {
-    if (!canFinish) return;
+    // Basic validation
+    if (!canFinish) {
+      toast({ description: "최소 1장의 광고 사진을 촬영해주세요.", variant: "destructive" });
+      return;
+    }
+
     const cached = gpsPositionRef.current;
     const isCachedFresh =
       cached && Date.now() - cached.timestamp < GPS_MAX_AGE_MS;
@@ -282,6 +368,7 @@ export default function CapturePage() {
     }
     try {
       sessionStorage.setItem(CAPTURE_SESSION_KEY, JSON.stringify(data));
+      router.push("/capture/confirm");
     } catch (e) {
       const isQuota = e instanceof DOMException && e.name === "QuotaExceededError";
       if (isQuota) {
@@ -290,208 +377,178 @@ export default function CapturePage() {
           description: "촬영 데이터가 많아 일부만 저장됩니다. 사진 수를 줄이거나 확인 페이지에서 바로 다운로드해 주세요.",
           variant: "destructive",
         });
+        // Try to proceed anyway
+        router.push("/capture/confirm");
       }
     }
-    router.push("/capture/confirm");
   }, [canFinish, locationImage, adImages, router, toast]);
 
-  return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col bg-slate-50">
-      <div className="container py-4">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">광고 촬영</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          먼저 지하철 역명판을 촬영한 뒤, 광고 배너를 다양한 각도로 촬영해 주세요 (최대 10장).
-        </p>
-        {status === "ready" && (locationImage != null || skipLocation) && (
-          <p className="mt-2 text-sm font-semibold text-indigo-600">
-            {skipLocation ? "위치 없음 · " : "위치 1장 · "}광고 {adImages.length}장
-          </p>
-        )}
-        {advertisersLoading && (
-          <p className="mt-1 text-xs text-slate-400">광고주 목록 불러오는 중…</p>
-        )}
-        {advertisersError && !advertisersLoading && (
-          <p className="mt-1 text-xs text-amber-600">
-            광고주 목록을 불러오지 못했습니다. 매칭이 제한될 수 있습니다.
-          </p>
-        )}
-        {status === "ready" && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-            {gpsStatus === "loading" && "위치 수집 중..."}
-            {gpsStatus === "ready" && "위치 준비됨"}
-            {gpsStatus === "error" && "위치 사용 불가 (권한 또는 오류)"}
-            {gpsStatus === "unsupported" && "위치 미지원 브라우저"}
-          </p>
-        )}
-      </div>
+  // Helper to toggle flash (Mock)
+  const toggleFlash = () => {
+    setFlashOn(!flashOn);
+    // Note: Actual constraints API for flash is quirky in browsers.
+    // Ideally we would apply constraints here.
+    toast({ description: flashOn ? "플래시 끄기 (지원 시)" : "플래시 켜기 (지원 시)" });
+  };
 
-      <div className="relative flex-1 min-h-[240px] bg-slate-950 overflow-hidden shadow-inner">
+  // Flip Camera
+  const toggleFacingMode = () => {
+    setFacingMode(prev => prev === "user" ? "environment" : "user");
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black text-white flex flex-col z-50 overflow-hidden">
+      {/* 1. Viewfinder Layer (Full Screen) */}
+      <div className="absolute inset-0 z-0 bg-gray-900">
         {status === "loading" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-400">
+          <div className="absolute inset-0 flex items-center justify-center text-white/50 z-20">
             카메라 연결 중...
           </div>
         )}
         {status === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 p-4 text-center text-slate-300">
-            <AlertCircle className="h-10 w-10 text-red-500" />
-            <p className="text-sm">{errorMessage}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startCamera}
-              className="border-slate-700 bg-slate-800 text-white hover:bg-slate-700 hover:text-white"
-            >
-              다시 시도
-            </Button>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white/80 z-20">
+            <p>{errorMessage}</p>
+            <Button variant="outline" className="mt-4" onClick={startCamera}>다시 시도</Button>
           </div>
         )}
-        {status === "ready" && (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="h-full w-full object-cover"
-            />
-            {/* AI Scanner Effect */}
-            <div className="absolute inset-0 z-10 pointer-events-none opacity-60">
-              <div className="w-full h-[50%] bg-gradient-to-b from-transparent via-cyan-500/20 to-cyan-500/50 absolute top-0 animate-scanner-line" />
-            </div>
-            {/* Grid overlay for tech feel */}
-            <div className="absolute inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
-          </>
-        )}
-        {status === "idle" && !errorMessage && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-500">
-            카메라를 불러오는 중...
-          </div>
-        )}
-      </div>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-300",
+            facingMode === "user" && "scale-x-[-1]", // Mirror selfie
+            status === "ready" ? "opacity-100" : "opacity-0"
+          )}
+        />
 
-      <div className="border-t border-slate-200 bg-white px-4 py-4 flex flex-col gap-3 w-full safe-area-padding-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-        <div className="flex flex-col gap-3 w-full">
-          {status === "ready" && (
-            <>
-              {locationImage == null && !skipLocation && (
-                <>
-                  <Button
-                    size="lg"
-                    className="gap-2 w-full h-14 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all"
-                    disabled={isCapturing}
-                    onClick={handleCapture}
-                  >
-                    <Camera className="h-6 w-6" />
-                    {isCapturing ? "촬영 중..." : "위치(역명) 촬영"}
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="gap-2 w-full h-12 text-slate-600 border-slate-200 hover:bg-slate-50 active:scale-[0.98] transition-all"
-                    onClick={handleSkipLocation}
-                  >
-                    <MapPinOff className="h-5 w-5" />
-                    위치 없음
-                  </Button>
-                </>
-              )}
-              {(locationImage != null || skipLocation) && (
-                <>
-                  {skipLocation && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1.5 w-full text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                      onClick={() => setSkipLocation(false)}
-                    >
-                      <MapPin className="h-4 w-4" />
-                      위치 촬영으로 되돌리기
-                    </Button>
-                  )}
-                  <Button
-                    size="lg"
-                    className="gap-2 w-full h-14 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
-                    disabled={isCapturing || adImages.length >= AD_MAX}
-                    onClick={handleCapture}
-                  >
-                    <Camera className="h-6 w-6" />
-                    {isCapturing
-                      ? (isAdMode ? "OCR 인식 중..." : "촬영 중...")
-                      : `광고 촬영 (${adImages.length}/${AD_MAX})`}
-                  </Button>
-                  {canFinish && (
-                    <Button
-                      size="lg"
-                      className="gap-2 w-full h-12 bg-slate-900 text-white hover:bg-slate-800 shadow-md active:scale-[0.98] transition-all"
-                      onClick={saveSessionAndGoToConfirm}
-                    >
-                      <FileText className="h-5 w-5" />
-                      이 위치 촬영 완료
-                    </Button>
-                  )}
-                </>
-              )}
-            </>
-          )}
-          {status === "error" && (
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-12 border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-              onClick={startCamera}
-            >
-              카메라 다시 켜기
-            </Button>
-          )}
+        {/* Tech Grid Overlay */}
+        <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px]" />
+
+        {/* AI Scanner Bar (Cyan) */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="w-full h-[50vh] bg-gradient-to-b from-transparent via-cyan-500/10 to-cyan-500/30 absolute top-[-50%] animate-scanner-line" />
+          <div className="absolute inset-0 border-[0.5px] border-white/5" /> {/* Subtle screen border */}
         </div>
-        {canFinish ? (
-          <Button
-            size="lg"
-            variant="outline"
-            className="gap-2 w-full h-12 border-slate-200 text-slate-600 hover:bg-slate-50"
-            onClick={saveSessionAndGoToConfirm}
-          >
-            <FileText className="h-5 w-5" />
-            보고서 작성하기
-          </Button>
-        ) : (
-          <Button asChild variant="outline" size="lg" className="gap-2 w-full h-12 border-slate-200 text-slate-600 hover:bg-slate-50">
-            <Link href="/reports">
-              <FileText className="h-5 w-5" />
-              보고서 목록
-            </Link>
-          </Button>
-        )}
       </div>
 
+      {/* 2. Top Bar (Safe Area) */}
+      <div className="relative z-10 w-full bg-gradient-to-b from-black/80 to-transparent pt-safe-top px-4 pb-12">
+        <div className="flex items-center justify-between h-14">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full" onClick={() => router.back()}>
+            <ChevronLeft className="w-8 h-8" />
+          </Button>
+
+          <div className="flex flex-col items-center">
+            <h1 className="text-base font-semibold drop-shadow-md">광고 촬영</h1>
+            {/* Optional Status Indicators */}
+            {/* <span className="text-[10px] text-white/70 bg-black/30 px-2 py-0.5 rounded-full">GPS Ready</span> */}
+          </div>
+
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full" onClick={toggleFlash}>
+            {flashOn ? <Zap className="w-6 h-6 text-yellow-400 fill-current" /> : <ZapOff className="w-6 h-6 opacity-70" />}
+          </Button>
+        </div>
+
+        {/* Location Off Toggle (Top Right/Left contextual) */}
+        <div className="absolute top-16 right-4">
+          <Button
+            variant={skipLocation ? "secondary" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs backdrop-blur-md gap-1.5 rounded-full transition-all", skipLocation ? "bg-white text-black" : "bg-black/40 text-white/90 border border-white/10")}
+            onClick={toggleSkipLocation}
+          >
+            <MapPinOff className="w-3.5 h-3.5" />
+            {skipLocation ? "위치 없음 켜짐" : "위치 없음"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Spacer to push controls to bottom */}
+      <div className="flex-1" />
+
+      {/* 3. Bottom Controls (Opaque Black) */}
+      <div className="relative z-10 w-full bg-black/95 rounded-t-[2.5rem] pb-safe-bottom pt-6 px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5">
+
+        {/* Mode Switcher */}
+        <div className="flex justify-center mb-6">
+          <CameraModeSwitcher
+            currentMode={mode}
+            onChangeMode={handleModeSwitch}
+          />
+        </div>
+
+        {/* Shutter & Gallery Row */}
+        <div className="flex items-center justify-between px-2 pb-6">
+
+          {/* Left: Gallery / Done */}
+          <div className="w-20 flex flex-col items-center gap-1.5">
+            <div className="relative group cursor-pointer" onClick={saveSessionAndGoToConfirm}>
+              <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-white/20 bg-gray-800">
+                {lastCapturedImage ? (
+                  <img src={lastCapturedImage} alt="Last" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/20">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                )}
+              </div>
+              {(adImages.length > 0) && (
+                <div className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-black px-1">
+                  {adImages.length}
+                </div>
+              )}
+            </div>
+            <span className="text-[11px] font-medium text-white/60">완료</span>
+          </div>
+
+          {/* Center: Shutter */}
+          <div className="flex-1 flex justify-center">
+            <ShutterButton
+              onClick={handleCapture}
+              isProcessing={isCapturing}
+              disabled={status !== "ready"}
+              className={cn(mode === "location" ? "ring-2 ring-offset-2 ring-offset-black ring-yellow-400" : "")}
+            />
+          </div>
+
+          {/* Right: Camera Flip (or spacer) */}
+          <div className="w-20 flex flex-col items-center justify-center">
+            <Button variant="ghost" size="icon" className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 text-white/80" onClick={toggleFacingMode}>
+              <SwitchCamera className="w-6 h-6" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* -- Sheets/Modals -- */}
       <Sheet open={showNoAdvertiserSheet} onOpenChange={setShowNoAdvertiserSheet}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader>
-            <SheetTitle>매칭되는 광고주가 없습니다</SheetTitle>
+        <SheetContent side="bottom" className="rounded-t-2xl pb-safe-bottom">
+          <SheetHeader className="text-left">
+            <SheetTitle>광고주 미인식</SheetTitle>
             <SheetDescription>
-              촬영한 광고물에서 등록된 광고주를 찾지 못했습니다. 재촬영하거나 광고주를 등록한 뒤 다시 시도해 주세요. 광고주 없이 일단 저장할 수도 있습니다.
+              광고주를 찾지 못했습니다. 어떻게 할까요?
             </SheetDescription>
           </SheetHeader>
-          <SheetFooter className="flex-row flex-wrap gap-3 sm:gap-3 mt-6">
+          <SheetFooter className="flex-row flex-wrap gap-3 mt-6 sm:justify-start">
             <Button
               variant="outline"
-              className="flex-1 min-w-[100px]"
+              className="flex-1 h-12"
               onClick={() => {
                 setPendingNoMatchImage(null);
                 setShowNoAdvertiserSheet(false);
               }}
             >
-              재촬영 시도
+              재촬영
             </Button>
-            <Button asChild className="flex-1 min-w-[100px]">
+            <Button asChild className="flex-1 h-12" variant="secondary">
               <Link href="/advertisers/new" onClick={() => { setPendingNoMatchImage(null); setShowNoAdvertiserSheet(false); }}>
                 광고주 등록
               </Link>
             </Button>
             <Button
-              className="flex-1 min-w-[100px]"
+              className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700"
               onClick={() => {
                 if (pendingNoMatchImage) {
                   addCapturedImage(pendingNoMatchImage);
@@ -505,6 +562,6 @@ export default function CapturePage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-    </div >
+    </div>
   );
 }
