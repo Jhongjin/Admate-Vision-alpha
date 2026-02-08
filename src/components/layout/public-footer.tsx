@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { BRAND } from "@/constants/brand";
-import { ChevronDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const footerLinks = {
   product: [
@@ -80,26 +86,23 @@ export function PublicFooter() {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
                 Family Site
               </p>
-              <div className="relative">
-                <select
-                  className="w-full appearance-none rounded-md border border-slate-200 bg-white py-2 pl-3 pr-8 text-sm text-slate-600 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer hover:bg-slate-50"
-                  defaultValue=""
-                  onChange={(e) => {
-                    // 현재는 클릭 안되게 처리 (이동 로직 없음)
-                    // 향후 구현 시 window.open(...) 사용
-                  }}
-                >
-                  <option value="" disabled hidden>Family Sites</option>
+              <Select
+                onValueChange={(value) => {
+                  // 현재는 클릭 안되게 처리 (이동 로직 없음)
+                  // 향후 구현 시 window.open(...) 사용
+                }}
+              >
+                <SelectTrigger className="w-full border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                  <SelectValue placeholder="Family Sites" />
+                </SelectTrigger>
+                <SelectContent>
                   {familySites.map((site) => (
-                    <option key={site} value={site}>
+                    <SelectItem key={site} value={site}>
                       {site}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                  <ChevronDown className="h-4 w-4" />
-                </div>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
