@@ -14,25 +14,26 @@ import {
   LineChart,
   Line
 } from "recharts";
-import { Activity, Tv, Eye, FileCheck, Sparkles, RefreshCw, Smartphone, MapPin, LayoutGrid } from "lucide-react";
+import { Activity, Tv, Eye, FileCheck, Sparkles, RefreshCw, Smartphone, MapPin, LayoutGrid, Bell, Images } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
-// Mock Data
+// Mock Data (Korean Context)
 const data = [
-  { name: 'Mon', value: 4000 },
-  { name: 'Tue', value: 3000 },
-  { name: 'Wed', value: 2000 },
-  { name: 'Thu', value: 2780 },
-  { name: 'Fri', value: 1890 },
-  { name: 'Sat', value: 2390 },
-  { name: 'Sun', value: 3490 },
+  { name: '월', value: 4200 },
+  { name: '화', value: 3800 },
+  { name: '수', value: 3500 },
+  { name: '목', value: 4100 },
+  { name: '금', value: 5200 },
+  { name: '토', value: 6800 },
+  { name: '일', value: 5900 },
 ];
 
 const recentLogs = [
-  { id: 1, location: "Gangnam St. Screen A", time: "14:02", status: "Verified", vehicle: "Bus 140" },
-  { id: 2, location: "Hongdae Exit 9", time: "13:45", status: "Verified", vehicle: "Taxi 3829" },
-  { id: 3, location: "Yeouido Transfer Ctr", time: "13:30", status: "Pending", vehicle: "Subway Screen" },
-  { id: 4, location: "Samsung COEX Mall", time: "13:15", status: "Verified", vehicle: "Digital Billboard" },
+  { id: 1, location: "강남역 11번 출구 스크린 A", time: "14:02", status: "Verified", vehicle: "버스 140번" },
+  { id: 2, location: "홍대입구역 9번 출구", time: "13:45", status: "Verified", vehicle: "택시 3829" },
+  { id: 3, location: "여의도 환승센터", time: "13:30", status: "Pending", vehicle: "지하철 스크린도어" },
+  { id: 4, location: "삼성 코엑스 몰", time: "13:15", status: "Verified", vehicle: "디지털 빌보드" },
 ];
 
 export default function AnalyticsPage() {
@@ -42,18 +43,32 @@ export default function AnalyticsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-pink-400">
-            AdMate Vision AI Analytics
+            AdMate Vision AI 분석 대시보드
           </h1>
-          <p className="text-neutral-400 mt-1">Real-time OOH Advertising Performance Dashboard</p>
+          <p className="text-neutral-400 mt-1">실시간 옥외광고(OOH) 성과 및 현황 모니터링</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="border-neutral-700 text-neutral-300 hover:bg-neutral-800">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Data
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+            <Link href="/admin/gallery">
+              <Images className="mr-2 h-4 w-4" />
+              스마트 갤러리
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+            <Link href="/admin/notifications">
+              <Bell className="mr-2 h-4 w-4" />
+              알림 센터
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+            <Link href="/dashboard">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              사용자 대시보드
+            </Link>
           </Button>
           <Button className="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0">
             <Sparkles className="mr-2 h-4 w-4" />
-            Run AI Analysis
+            AI 분석 실행
           </Button>
         </div>
       </div>
@@ -61,30 +76,30 @@ export default function AnalyticsPage() {
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
-          title="Total Impressions" 
-          value="1.2M" 
+          title="총 노출 수" 
+          value="120만" 
           change="+12.5%" 
           icon={<Eye className="h-5 w-5 text-blue-400" />}
           gradient="from-blue-500/10 to-blue-500/5"
         />
         <MetricCard 
-          title="Covered Locations" 
-          value="45" 
-          change="+3 new sites" 
+          title="관리 지점" 
+          value="45개소" 
+          change="+3개소 추가" 
           icon={<MapPin className="h-5 w-5 text-violet-400" />}
           gradient="from-violet-500/10 to-violet-500/5"
         />
         <MetricCard 
-          title="AI Detection Rate" 
+          title="AI 인식률" 
           value="98.5%" 
           change="+0.2%" 
           icon={<Smartphone className="h-5 w-5 text-pink-400" />}
           gradient="from-pink-500/10 to-pink-500/5"
         />
         <MetricCard 
-          title="Slot Occupancy" 
+          title="슬롯 점유율" 
           value="85%" 
-          change="15% Vacant" 
+          change="잔여 15%" 
           icon={<LayoutGrid className="h-5 w-5 text-amber-400" />}
           gradient="from-amber-500/10 to-amber-500/5"
         />
@@ -97,9 +112,9 @@ export default function AnalyticsPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-neutral-900 border-neutral-800">
             <CardHeader>
-              <CardTitle className="text-white">Daily Ad Exposures</CardTitle>
+              <CardTitle className="text-white">일일 광고 노출 현황</CardTitle>
               <CardDescription className="text-neutral-400">
-                Number of verified ad displays over the last 7 days
+                최근 7일간 검증된 광고 노출 수 추이
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -141,20 +156,20 @@ export default function AnalyticsPage() {
           </Card>
           
           {/* AI Insight Box */}
-          <Card className="bg-gradient-to-br from-violet-900/20 to-pink-900/20 border-violet-500/30">
+          <Card className="bg-neutral-900 border-violet-500/30 border shadow-[0_0_15px_rgba(139,92,246,0.1)]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-violet-400 animate-pulse" />
-                <CardTitle className="text-lg text-violet-100">AI Daily Insight</CardTitle>
+                <CardTitle className="text-lg text-white">AI 일일 인사이트</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-neutral-300">
-                <p>Based on today's data analysis:</p>
+              <div className="space-y-2 text-neutral-200">
+                <p>오늘의 데이터 분석 결과:</p>
                 <ul className="list-disc list-inside space-y-1 text-sm text-neutral-400 ml-1">
-                  <li>Exposure efficiency is highest during <strong>14:00 - 16:00</strong>.</li>
-                  <li><strong>Gangnam Screen A</strong> has 15% more potential viewers than average.</li>
-                  <li>Anomaly detected: <strong>Hongdae Exit 9</strong> screen brightness seems low in captured images.</li>
+                  <li>광고 노출 효율이 <strong>14:00 - 16:00</strong> 시간대에 가장 높습니다.</li>
+                  <li><strong>강남역 스크린 A</strong>의 유동인구가 평소보다 15% 증가했습니다.</li>
+                  <li>이상 감지: <strong>홍대입구역 9번 출구</strong> 스크린의 밝기가 기준치보다 낮게 측정되었습니다.</li>
                 </ul>
               </div>
             </CardContent>
@@ -167,7 +182,7 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle className="text-white text-lg flex items-center gap-2">
                 <Activity className="h-5 w-5 text-neutral-400" />
-                Recent Logs
+                최근 활동 로그
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -184,7 +199,7 @@ export default function AnalyticsPage() {
                 </div>
               ))}
               <Button variant="ghost" className="w-full text-xs text-neutral-500 hover:text-neutral-300">
-                View All Activity
+                전체 활동 보기
               </Button>
             </CardContent>
           </Card>

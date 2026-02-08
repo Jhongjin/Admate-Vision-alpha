@@ -412,7 +412,7 @@ export default function CapturePage() {
         {status === "error" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white/80 z-20">
             <p>{errorMessage}</p>
-            <Button variant="outline" className="mt-4" onClick={startCamera}>다시 시도</Button>
+            <Button className="mt-4 bg-white text-black hover:bg-neutral-200" onClick={startCamera}>다시 시도</Button>
           </div>
         )}
         <video

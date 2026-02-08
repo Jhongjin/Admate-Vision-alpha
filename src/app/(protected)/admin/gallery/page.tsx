@@ -5,78 +5,79 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, Camera, Tag, Clock, MapPin, X, ArrowUpRight } from "lucide-react";
+import { Search, Filter, Camera, Tag, Clock, MapPin, X, ArrowUpRight, LayoutDashboard, Bell } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 // Mock Data for Gallery
 const galleryItems = [
   {
     id: 1,
     url: "https://images.unsplash.com/photo-1544985337-c86ef0f3f227?q=80&w=600&auto=format&fit=crop",
-    location: "Gangnam Station Exit 11",
+    location: "강남역 11번 출구",
     time: "2024-02-08 14:30",
-    tags: ["Digital Billboard", "Daytime", "Crowded"],
+    tags: ["전광판", "주간", "혼잡"],
     confidence: "99.2%",
     status: "verified"
   },
   {
     id: 2,
     url: "https://images.unsplash.com/photo-1570174092758-2023cb23438e?q=80&w=600&auto=format&fit=crop",
-    location: "Yeouido Transfer Center",
+    location: "여의도 환승센터",
     time: "2024-02-08 13:15",
-    tags: ["Bus Shelter", "Static", "Sunny"],
+    tags: ["버스 쉘터", "고정형", "맑음"],
     confidence: "98.5%",
     status: "verified"
   },
   {
     id: 3,
     url: "https://images.unsplash.com/photo-1519638831568-d9897f54ed69?q=80&w=600&auto=format&fit=crop",
-    location: "Hongdae Main Street",
+    location: "홍대입구역 메인거리",
     time: "2024-02-07 22:45",
-    tags: ["Neon Sign", "Night", "Rain"],
+    tags: ["네온 사인", "야간", "비"],
     confidence: "94.1%",
     status: "review_needed"
   },
   {
     id: 4,
     url: "https://images.unsplash.com/photo-1494587351196-bbf560c4832d?q=80&w=600&auto=format&fit=crop",
-    location: "Olympic Highway",
+    location: "올림픽대로",
     time: "2024-02-08 09:20",
-    tags: ["Billboard", "Highway", "Clear"],
+    tags: ["야립 광고", "고속도로", "맑음"],
     confidence: "97.8%",
     status: "verified"
   },
   {
     id: 5,
     url: "https://images.unsplash.com/photo-1517260739337-6799d2eb9ce0?q=80&w=600&auto=format&fit=crop",
-    location: "COEX Mall Interior",
+    location: "코엑스 몰 내부",
     time: "2024-02-08 11:05",
-    tags: ["Indoor LCD", "Video", "High Traffic"],
+    tags: ["실내 LCD", "비디오", "유동인구 많음"],
     confidence: "99.9%",
     status: "verified"
   },
   {
     id: 6,
     url: "https://images.unsplash.com/photo-1557053503-0c252e5c8093?q=80&w=600&auto=format&fit=crop",
-    location: "Jamsil Lotte Tower",
+    location: "잠실 롯데타워",
     time: "2024-02-07 19:30",
-    tags: ["LED Facade", "Night", "Landmark"],
+    tags: ["미디어 파사드", "야간", "랜드마크"],
     confidence: "95.5%",
     status: "verified"
   }
 ];
 
-const allTags = ["All", "Digital Billboard", "Bus Shelter", "Night", "Daytime", "Rain", "Indoor"];
+const allTags = ["전체", "전광판", "버스 쉘터", "야간", "주간", "비", "실내"];
 
 export default function GalleryPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTag, setSelectedTag] = useState("All");
+  const [selectedTag, setSelectedTag] = useState("전체");
 
   // Filtering Logic
   const filteredItems = galleryItems.filter(item => {
     const matchesSearch = item.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesTag = selectedTag === "All" || item.tags.includes(selectedTag);
+    const matchesTag = selectedTag === "전체" || item.tags.includes(selectedTag);
     return matchesSearch && matchesTag;
   });
 
@@ -86,18 +87,26 @@ export default function GalleryPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-pink-400">
-            Smart Image Gallery
+            스마트 이미지 갤러리
           </h1>
-          <p className="text-neutral-400 mt-1">AI-powered visual search for your ad campaigns</p>
+          <p className="text-neutral-400 mt-1">AI 기반 광고 이미지 검색 및 관리 시스템</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-neutral-700 text-neutral-300 hover:bg-neutral-800">
-            <ArrowUpRight className="mr-2 h-4 w-4" />
-            Export Report
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+            <Link href="/admin/dashboard">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              관리자 대시보드
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+            <Link href="/admin/notifications">
+              <Bell className="mr-2 h-4 w-4" />
+              알림 센터
+            </Link>
           </Button>
           <Button className="bg-white text-black hover:bg-neutral-200 border-0">
             <Camera className="mr-2 h-4 w-4" />
-            Upload New
+            이미지 업로드
           </Button>
         </div>
       </div>
@@ -108,7 +117,7 @@ export default function GalleryPage() {
           <div className="relative flex-1 max-w-lg">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-500" />
             <Input 
-              placeholder="Search locations, tags, or time..." 
+              placeholder="장소, 태그, 시간으로 검색..." 
               className="pl-10 bg-neutral-900 border-neutral-800 text-white focus:ring-violet-500 focus:border-violet-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -116,7 +125,7 @@ export default function GalleryPage() {
           </div>
           <Button variant="ghost" className="text-neutral-400 hover:text-white">
             <Filter className="mr-2 h-4 w-4" />
-            Advanced
+            상세 필터
           </Button>
         </div>
 
@@ -159,13 +168,13 @@ export default function GalleryPage() {
                       ? 'bg-emerald-500/80 text-white' 
                       : 'bg-yellow-500/80 text-white'
                   }`}>
-                    {item.status === 'verified' ? 'Verified' : 'Review Needed'}
+                    {item.status === 'verified' ? '검증됨' : '확인 필요'}
                   </Badge>
                 </div>
                 {/* Confidence Score */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="flex items-center text-xs text-white/90">
-                    <span className="font-semibold text-violet-300 mr-2">AI Confidence:</span>
+                    <span className="font-semibold text-violet-300 mr-2">AI 신뢰도:</span>
                     {item.confidence}
                   </div>
                 </div>
@@ -201,8 +210,8 @@ export default function GalleryPage() {
         {filteredItems.length === 0 && (
           <div className="col-span-full py-12 text-center text-neutral-500">
             <X className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p className="text-lg font-medium">No images found</p>
-            <p className="text-sm">Try adjusting your filters or search terms</p>
+            <p className="text-lg font-medium">이미지를 찾을 수 없습니다</p>
+            <p className="text-sm">검색어의 철자를 확인하거나 필터를 조정해보세요.</p>
           </div>
         )}
       </div>
