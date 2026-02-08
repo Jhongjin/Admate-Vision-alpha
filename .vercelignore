@@ -1,0 +1,31 @@
+# Test & E2E
+/e2e
+/test-results
+/playwright-report
+playwright.config.ts
+vitest.config.ts
+vitest.d.ts
+vitest.setup.ts
+test-storage.ts
+
+# Documentation & Guidelines
+/components.json
+/.ruler
+/.vooster
+/AGENTS.md
+/CHANGELOG.md
+/DESIGN.md
+/README.md
+/agents/
+/docs/
+/vooster-docs/
+
+# Scripts
+/scripts/
+upload-fonts.ts
+
+# Misc
+.cursorignore
+.env*
+!.env.example
+!.env.production
