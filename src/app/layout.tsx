@@ -8,9 +8,18 @@ export const metadata: Metadata = {
   title: "AdMate Vision - 옥외 광고 게재 현황 자동 보고",
   description: "AdMate Vision. 옥외 광고 촬영·광고주 인식·보고를 한 번에.",
   icons: {
-    icon: "/apple-icon", // Use the generated PNG for favicon too to keep consistent look
-    apple: "/apple-icon",
+    icon: [
+      { url: "/icon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      { rel: "manifest", url: "/icon/manifest.json" },
+    ],
   },
+  manifest: "/icon/manifest.json",
 };
 
 export const viewport: Viewport = {
