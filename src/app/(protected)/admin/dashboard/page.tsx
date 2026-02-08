@@ -38,16 +38,16 @@ const recentLogs = [
 
 export default function AnalyticsPage() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-white p-8 space-y-8">
+    <div className="min-h-screen bg-neutral-950 text-white p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-pink-400">
             AdMate Vision AI 분석 대시보드
           </h1>
           <p className="text-neutral-400 mt-1">실시간 옥외광고(OOH) 성과 및 현황 모니터링</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
           <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
             <Link href="/admin/gallery">
               <Images className="mr-2 h-4 w-4" />
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] w-full">
+              <div className="h-[250px] md:h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
