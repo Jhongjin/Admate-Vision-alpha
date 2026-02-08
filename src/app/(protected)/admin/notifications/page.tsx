@@ -122,20 +122,13 @@ export default function NotificationCenterPage() {
               <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
                 <Link href="/admin/dashboard">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
-                  관리자 대시보드
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
-                <Link href="/admin/gallery">
-                  <Images className="mr-2 h-4 w-4" />
-                  스마트 갤러리
+                  대시보드 복귀
                 </Link>
               </Button>
               <Button 
                 variant="ghost" 
-                size="sm" 
-                onClick={markAllAsRead}
                 className="text-neutral-400 hover:text-white hover:bg-neutral-800 border border-neutral-700"
+                onClick={markAllAsRead}
                 disabled={unreadCount === 0}
               >
                 <CheckCircle2 className="mr-2 h-4 w-4" />

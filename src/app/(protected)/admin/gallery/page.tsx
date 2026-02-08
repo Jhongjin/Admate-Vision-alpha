@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, Camera, Tag, Clock, MapPin, X, ArrowUpRight, LayoutDashboard, Bell } from "lucide-react";
+import { Search, Filter, Camera, Tag, Clock, MapPin, X, ArrowUpRight, LayoutDashboard, Bell, FileText } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -95,13 +95,7 @@ export default function GalleryPage() {
           <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
             <Link href="/admin/dashboard">
               <LayoutDashboard className="mr-2 h-4 w-4" />
-              관리자 대시보드
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
-            <Link href="/admin/notifications">
-              <Bell className="mr-2 h-4 w-4" />
-              알림 센터
+              대시보드 복귀
             </Link>
           </Button>
           <Button className="bg-white text-black hover:bg-neutral-200 border-0">

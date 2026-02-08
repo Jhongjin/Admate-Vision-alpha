@@ -14,7 +14,7 @@ import {
   LineChart,
   Line
 } from "recharts";
-import { Activity, Tv, Eye, FileCheck, Sparkles, RefreshCw, Smartphone, MapPin, LayoutGrid, Bell, Images } from "lucide-react";
+import { Activity, Tv, Eye, FileCheck, Sparkles, RefreshCw, Smartphone, MapPin, LayoutGrid, Bell, Images, FileText } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -59,6 +59,18 @@ export default function AnalyticsPage() {
               <Bell className="mr-2 h-4 w-4" />
               알림 센터
             </Link>
+          </Button>
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+             <Link href="/admin/map">
+               <MapPin className="mr-2 h-4 w-4 text-cyan-400" />
+               실시간 맵
+             </Link>
+            </Button>
+          <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
+             <Link href="/admin/reports">
+               <FileText className="mr-2 h-4 w-4 text-pink-400" />
+               비즈니스 리포트
+             </Link>
           </Button>
           <Button asChild variant="ghost" className="bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white border border-neutral-700">
             <Link href="/dashboard">
