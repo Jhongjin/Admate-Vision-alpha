@@ -47,6 +47,8 @@ export type ReportEmailParams = {
   pdfAttachment?: { filename: string; buffer: Buffer };
   /** AI 분석 리포트 URL */
   reportUrl?: string;
+  /** 다중 역 목록 (2개 이상일 때만 전달) */
+  visits?: { station: string; line: string }[];
 };
 
 function safeFilenamePart(s: string): string {
@@ -54,9 +56,15 @@ function safeFilenamePart(s: string): string {
 }
 
 export function buildReportSubject(params: ReportEmailParams): string {
-  const { advertiserName, line, station, userEnteredName, dateStr } = params;
+  const { advertiserName, line, station, userEnteredName, dateStr, visits } = params;
 
   const a = safeFilenamePart(advertiserName);
+
+  // 다중 역인 경우 간결한 제목
+  if (visits && visits.length > 1) {
+    const l = safeFilenamePart(line);
+    return `${a}_${l}_${visits.length}개역_${dateStr} 게첨 보고서의 건`;
+  }
 
   // 위치(역명)가 없는 경우 깔끔한 제목 사용
   if (!station || station === "미인식" || station === "") {
@@ -74,7 +82,7 @@ export function buildReportSubject(params: ReportEmailParams): string {
 }
 
 export function buildReportBody(params: ReportEmailParams): string {
-  const { senderNameOption, loginUserName, campaignManagerName, campaignManagerEmail, reportUrl } = params;
+  const { senderNameOption, loginUserName, campaignManagerName, campaignManagerEmail, reportUrl, visits } = params;
   const senderName =
     senderNameOption === "user" ? loginUserName || "나스미디어" : campaignManagerName;
   let body = `안녕하세요.
@@ -82,6 +90,14 @@ export function buildReportBody(params: ReportEmailParams): string {
 나스미디어 ${senderName} 입니다. 게첨 보고서 전달 드립니다.
 해당 메일은 발신전용으로 관련사항에 대한 문의는 ${campaignManagerName} (${campaignManagerEmail}) 로 회신 부탁 드립니다.
 `;
+
+  // 다중 역 목록 표시
+  if (visits && visits.length > 1) {
+    body += `\n촬영 역 목록 (${visits.length}개):\n`;
+    visits.forEach((v, i) => {
+      body += `  ${i + 1}. ${v.station} (${v.line})\n`;
+    });
+  }
 
   if (reportUrl) {
     body += `

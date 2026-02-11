@@ -162,6 +162,8 @@ export interface ReportPdfParams {
         totalExposure: number;
         dailyFlow: number;
     };
+    /** 다중 역 목록 (2개 이상일 때만 전달) */
+    visits?: { station: string; line: string }[];
 }
 
 const ReportDocument: React.FC<ReportPdfParams> = ({
@@ -172,6 +174,7 @@ const ReportDocument: React.FC<ReportPdfParams> = ({
     aiAnalysis,
     imageBase64s,
     exposure,
+    visits,
 }) => {
     const formattedDate =
         dateStr.length === 8
@@ -205,7 +208,9 @@ const ReportDocument: React.FC<ReportPdfParams> = ({
                         <View style={styles.metricBox}>
                             <Text style={styles.metricLabel}>위치</Text>
                             <Text style={styles.metricValue}>
-                                {station} ({line})
+                                {visits && visits.length > 1
+                                    ? `${visits.length}개 역 촬영`
+                                    : `${station} (${line})`}
                             </Text>
                         </View>
                         <View style={styles.metricBox}>
@@ -227,6 +232,20 @@ const ReportDocument: React.FC<ReportPdfParams> = ({
                         </View>
                     </View>
                 </View>
+
+                {/* Multi-station list */}
+                {visits && visits.length > 1 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>촬영 역 목록</Text>
+                        <View style={styles.card}>
+                            {visits.map((v, i) => (
+                                <Text key={i} style={{ fontSize: 9, lineHeight: 1.6, color: "#334155" }}>
+                                    {i + 1}. {v.station} ({v.line})
+                                </Text>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
                 {/* AI Analysis Text */}
                 {aiAnalysis?.analysisText && (

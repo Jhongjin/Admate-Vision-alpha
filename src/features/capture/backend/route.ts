@@ -38,6 +38,15 @@ const OcrBodySchema = z.object({
   imageDataUrl: z.string().min(1, "imageDataUrl is required"),
 });
 
+/** 다중 역 방문 정보 (V2) */
+const VisitSchema = z.object({
+  station: z.string().optional(),
+  line: z.string().optional(),
+  imageCount: z.number().int().min(0).optional(),
+  dateStr: z.string().optional(),
+  skipLocation: z.boolean().optional(),
+});
+
 /** 보고 발송 요청 스키마 (Resend 이메일 연동) */
 const ReportBodySchema = z.object({
   advertiserId: z.string().uuid().optional(),
@@ -60,6 +69,8 @@ const ReportBodySchema = z.object({
   displayDays: z.number().int().min(1).max(365).optional(),
   /** AI 성과 분석 건너뛰기(타임아웃 시 사용자 선택용) */
   skipAiAnalysis: z.boolean().optional(),
+  /** 다중 역 방문 배열 (V2 전용, 선택) */
+  visits: z.array(VisitSchema).optional(),
 }).passthrough();
 
 export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
@@ -150,14 +161,20 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
 
       const dateStr = payload.dateStr ?? new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
+      // ── Multi-station: resolve representative station/line ──
+      const visits = payload.visits; // V2 multi-station array
+      const representativeStation = payload.station ?? visits?.[0]?.station;
+      const representativeLine = payload.line ?? visits?.[0]?.line;
+      const totalImageCount = payload.imageCount ?? visits?.reduce((s, v) => s + (v.imageCount ?? 0), 0) ?? 0;
+
       let exposure: { totalExposure: number; dailyFlow: number } | undefined;
       const imageBase64s = payload.zipBase64
         ? await extractImageBase64sFromZip(payload.zipBase64)
         : [];
 
       // Calculate exposure for PDF (replacing PPT logic)
-      if (payload.station && payload.line) {
-        const flowResult = await fetchStationFlow(payload.station, payload.line);
+      if (representativeStation && representativeLine) {
+        const flowResult = await fetchStationFlow(representativeStation, representativeLine);
         if (flowResult.ok) {
           const displayDays = payload.displayDays ?? 7;
           exposure = calculateExposure({
@@ -174,16 +191,17 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       /** Gemini 호출 타임아웃(ms). Vercel Pro(5분) 환경이므로 3분까지 대기. */
       const AI_ANALYSIS_TIMEOUT_MS = 180_000;
       let aiAnalysisData: AiAnalysisResult | null = null;
-      console.log('station', payload.station)
-      console.log('line', payload.line)
+      console.log('station', representativeStation)
+      console.log('line', representativeLine)
       console.log('advertiserName', payload.advertiserName)
       console.log('skipAiAnalysis', payload.skipAiAnalysis)
-      if (payload.station && payload.line && payload.advertiserName && !payload.skipAiAnalysis) {
+      console.log('visits', visits?.length ?? 0)
+      if (representativeStation && representativeLine && payload.advertiserName && !payload.skipAiAnalysis) {
         try {
           aiAnalysisData = await Promise.race([
             generateAiAnalysis({
-              station: payload.station,
-              line: payload.line,
+              station: representativeStation,
+              line: representativeLine,
               advertiserName: payload.advertiserName,
               dateStr,
               dailyTraffic: exposure?.dailyFlow,
@@ -210,15 +228,22 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
       }
       // Generate PDF (only if station/line provided AND not skipped)
       let pdfAttachment: { filename: string; buffer: Buffer } | undefined;
-      if (payload.station && payload.line && !payload.skipAiAnalysis) {
+      if (representativeStation && representativeLine && !payload.skipAiAnalysis) {
         try {
-          const safeStation = payload.station.replace(/[/\\:*?"<>|]/g, "_").trim();
-          const safeLine = payload.line.replace(/[/\\:*?"<>|]/g, "_").trim();
+          const safeStation = representativeStation.replace(/[/\\:*?"<>|]/g, "_").trim();
+          const safeLine = representativeLine.replace(/[/\\:*?"<>|]/g, "_").trim();
+
+          // Build visits list for PDF
+          const pdfVisits = visits && visits.length > 1
+            ? visits
+                .filter((v) => v.station && v.line)
+                .map((v) => ({ station: v.station!, line: v.line! }))
+            : undefined;
 
           const pdfBuffer = await generateReportPdf({
             advertiserName: payload.advertiserName ?? adv.name,
-            station: payload.station,
-            line: payload.line,
+            station: representativeStation,
+            line: representativeLine,
             dateStr,
             aiAnalysis: aiAnalysisData,
             imageBase64s: imageBase64s,
@@ -226,10 +251,15 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
               totalExposure: exposure.totalExposure,
               dailyFlow: exposure.dailyFlow,
             } : undefined,
+            visits: pdfVisits,
           });
 
+          const stationLabel = visits && visits.length > 1
+            ? `${visits.length}개역`
+            : safeStation;
+
           pdfAttachment = {
-            filename: `성과분석보고_${payload.advertiserName ?? adv.name}_${safeLine}_${safeStation}_${dateStr}.pdf`,
+            filename: `성과분석보고_${payload.advertiserName ?? adv.name}_${safeLine}_${stationLabel}_${dateStr}.pdf`,
             buffer: pdfBuffer,
           };
         } catch (pdfErr) {
@@ -237,15 +267,20 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         }
       }
 
+      // Merge visits info into ai_analysis JSON for DB storage
+      const dbAiAnalysis = visits && visits.length > 1
+        ? { ...(aiAnalysisData ?? {}), visits: visits.map((v) => ({ station: v.station, line: v.line, imageCount: v.imageCount })) }
+        : aiAnalysisData;
+
       const { data: insertedReport, error: insertErr } = await supabase.from("vision_ocr_reports").insert({
         advertiser_id: payload.advertiserId,
         advertiser_name: payload.advertiserName ?? adv.name,
-        station: payload.station ?? null,
-        line: payload.line ?? null,
+        station: representativeStation ?? null,
+        line: representativeLine ?? null,
         location_label: payload.locationLabel ?? payload.userEnteredName ?? null,
-        image_count: payload.imageCount ?? null,
+        image_count: totalImageCount || null,
         sent_to_email: sentToEmail ?? null,
-        ai_analysis: aiAnalysisData,
+        ai_analysis: dbAiAnalysis,
       }).select().single();
 
       if (insertErr || !insertedReport) {
@@ -346,11 +381,18 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         }
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://vision-ooh.admate.ai.kr");
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://vision.admate.ai.kr");
 
       // AI 분석(위치정보)이 있는 경우에만 리포트 URL 생성 및 메일 포함
-      const reportUrl = (payload.station && payload.line && insertedReport.ai_analysis)
+      const reportUrl = (representativeStation && representativeLine && insertedReport.ai_analysis)
         ? `${baseUrl}/reports/analysis/${insertedReport.id}`
+        : undefined;
+
+      // Build visits list for email
+      const emailVisits = visits && visits.length > 1
+        ? visits
+            .filter((v) => v.station && v.line)
+            .map((v) => ({ station: v.station!, line: v.line! }))
         : undefined;
 
       const result = await sendReportEmail({
@@ -361,14 +403,15 @@ export const registerCaptureRoutes = (app: Hono<AppEnv>) => {
         campaignManagerName: adv.campaignManagerName,
         loginUserName: payload.loginUserName ?? "",
         advertiserName: payload.advertiserName ?? adv.name,
-        line: payload.line ?? "",
-        station: payload.station ?? "",
+        line: representativeLine ?? "",
+        station: representativeStation ?? "",
         userEnteredName: payload.userEnteredName ?? "",
         dateStr,
         zipBase64: payload.zipBase64,
         zipFilename: payload.zipFilename,
         pdfAttachment,
         reportUrl,
+        visits: emailVisits,
       });
 
       if (!result.ok) {
