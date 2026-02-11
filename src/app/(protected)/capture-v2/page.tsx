@@ -288,7 +288,7 @@ export default function CaptureV2Page() {
       const text = await runOcr(imageDataUrl);
       const match = matchOcrToAdvertiser(text, advertisers);
       if (match) {
-        storeSetRecognizedAdvertiser(match.advertiserId, match.advertiserName);
+        storeSetRecognizedAdvertiser({ id: match.advertiserId, name: match.advertiserName });
         addCapturedImage(imageDataUrl);
         toast({ description: `${match.advertiserName} 광고주 인식됨!` });
       } else {
